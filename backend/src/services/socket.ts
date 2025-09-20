@@ -33,15 +33,12 @@ class SocketService {
       // Client joins one or more rooms
       socket.on(
         "join-rooms",
-        ({ userId, groupIds }: { userId: string; groupIds: string[] }) => {
-          console.log(`User ${userId} joining rooms: ${groupIds.join(", ")}`);
-          groupIds.forEach((groupId) => {
-            this.pub.publish(
-              "JOIN-GROUPS",
-              JSON.stringify({ userId, groupId })
-            );
-            socket.join(groupId); // Join group as room
-          });
+        ({ username, chatRoom }: { username: string; chatRoom: any[] }) => {
+          console.log(`User ${username} joining room`);
+          this.pub.publish(
+            "JOIN-GROUPS",
+            JSON.stringify({ username, chatRoom })
+          );
         }
       );
 
@@ -103,22 +100,12 @@ class SocketService {
         }
       } else if (channel === "JOIN-GROUPS") {
         try {
-          const { userId, groupId } = JSON.parse(message);
-          const chatroom = await Chatroom.findById(groupId);
-          if (!chatroom.participants.includes(userId)) {
-            await Chatroom.updateOne(
-              { _id: groupId },
-              {
-                $inc: { participantCount: 1 },
-                $push: { participants: userId },
-              }
-            );
-          }
+          const { username, chatRoom } = JSON.parse(message);
           // Emit join-rooms event as before
           this.io
-            .to(groupId)
-            .emit("join-rooms", { userId, groupIds: [groupId] });
-          console.log(`Broadcasted message to room ${groupId}`);
+            .to(chatRoom._id)
+            .emit("join-rooms", { username, chatRoom });
+          console.log(`Broadcasted message to room ${chatRoom._id}`);
         } catch (err) {
           console.error("Failed to parse message from Redis:", err);
         }

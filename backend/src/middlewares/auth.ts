@@ -1,44 +1,56 @@
-import { NextFunction, Request, Response } from 'express';
-import jsonwebtoken from 'jsonwebtoken';
-import Token from '../models/Token';
+import { NextFunction, Request, Response } from "express";
+import jsonwebtoken from "jsonwebtoken";
+import Token from "../models/Token";
 
-function jwtTokenMiddleware(req: Request, res: Response, next: NextFunction) {
-    const token = req.headers.authorization?.split(' ')[1];
+async function jwtTokenMiddleware(
+    req: any,
+    res: Response,
+    next: NextFunction
+) {
+    const token = req.headers.authorization?.split(" ")[1];
 
     if (!token) {
-        return res.status(401).json({
+        res.status(401).json({
             success: false,
-            message: 'Unauthorized',
-            error: 'No access token provided in request header. Please provide the access token in the header.'
+            message: "Unauthorized",
+            error:
+                "No access token provided in request header. Please provide the access token in the header.",
         });
+        return;
     }
 
-    jsonwebtoken.verify(token, process.env.ACCESS_TOKEN_SECRET!, async (err: any, decoded: any) => {
-        if (err) {
-            const tokenEntry = await Token.findOne({ token });
+    jsonwebtoken.verify(
+        token,
+        process.env.ACCESS_TOKEN_SECRET!,
+        async (err: any, decoded: any) => {
+            if (err) {
+                const tokenEntry = await Token.findOne({ token });
 
-            if (tokenEntry) {
-                tokenEntry.expired = true;
-                await tokenEntry.save();
+                if (tokenEntry) {
+                    tokenEntry.expired = true;
+                    await tokenEntry.save();
 
-                return res.status(401).json({
-                    success: false,
-                    message: 'Unauthorized',
-                    error: err.name === 'TokenExpiredError'
-                        ? 'Access token is expired. Please login again.'
-                        : 'Access token is invalid. Please login again.'
-                });
-            } else {
-                return res.status(401).json({
-                    success: false,
-                    message: 'Unauthorized',
-                    error: 'Access token is invalid and not recognized. Please login again.'
-                });
+                    return res.status(401).json({
+                        success: false,
+                        message: "Unauthorized",
+                        error:
+                            err.name === "TokenExpiredError"
+                                ? "Access token is expired. Please login again."
+                                : "Access token is invalid. Please login again.",
+                    });
+                } else {
+                    return res.status(401).json({
+                        success: false,
+                        message: "Unauthorized",
+                        error:
+                            "Access token is invalid and not recognized. Please login again.",
+                    });
+                }
             }
+            req.user = decoded;
+            next();
         }
-
-        next();
-    });
+    );
 }
 
 export default jwtTokenMiddleware;
