@@ -12,6 +12,7 @@ interface ISocketContext {
 	joinRooms: (userId: string, groupIds: string[]) => void;
 	leaveRooms: (userId: string, groupIds: string[]) => void;
 	isConnected: boolean;
+	joinedChatRooms?: ChatRoom[];
 }
 
 const SocketContext = React.createContext<ISocketContext | null>(null);
@@ -26,7 +27,7 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
 	const [socket, setSocket] = useState<Socket>();
 	const [messages, setMessages] = useState<Message[]>([]);
 	const [isConnected, setIsConnected] = useState(false);
-	const [activeUsers, setActiveUsers] = useState<string[]>([]);
+	const [joinedChatRooms, setJoinedChatRooms] = useState<ChatRoom[]>([]);
 
 	const sendMessage = useCallback(
 		(message: string, senderId: string, receiverId: string) => {
@@ -47,16 +48,20 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
 	);
 
 	const onJoinRooms = useCallback(
-		({ userId: joinedUserId }: { userId: string }) => {
+		({ Username: joinedUsername, chatRoom: joinedChatRoom }: { Username: string, chatRoom: ChatRoom }) => {
+			console.log(`User ${joinedUsername} joined the chatroom ${joinedChatRoom.name}`);
 			setMessages((prev) => [
 				...prev,
 				{
-					senderId: joinedUserId,
-					message: `User ${joinedUserId} joined the chat.`,
+					senderId: joinedUsername,
+					message: `User ${joinedUsername} joined the chat.`,
 					type: "system",
 				},
 			]);
-			setActiveUsers((prev) => (prev.includes(joinedUserId) ? prev : [...prev, joinedUserId]));
+			// add joined chatroom to state if not already present
+			if (joinedChatRoom && !joinedChatRooms.find((room) => room._id === joinedChatRoom._id)) {
+				setJoinedChatRooms((prev) => [...prev, joinedChatRoom]);
+			}
 		},
 		[socket]
 	);
@@ -80,7 +85,6 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
 					type: "system",
 				},
 			]);
-			setActiveUsers((prev) => prev.filter((id) => id !== joinedUserId));
 		},
 		[socket]
 	);
@@ -114,5 +118,5 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
 	}, []);
 
 
-	return <SocketContext.Provider value={{ sendMessage, messages, joinRooms, leaveRooms, isConnected }}>{children}</SocketContext.Provider>;
+	return <SocketContext.Provider value={{ sendMessage, messages, joinRooms, leaveRooms, isConnected, joinedChatRooms }}>{children}</SocketContext.Provider>;
 };
