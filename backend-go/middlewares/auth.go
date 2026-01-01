@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/your-username/chatterbase-backend-go/services"
+	"github.com/ujjwalkirti/chatterbase-backend-go/services"
 )
 
 func JWTAuthMiddleware() gin.HandlerFunc {

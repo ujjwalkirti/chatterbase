@@ -1,8 +1,9 @@
 type ChatRoomType = 'private' | 'group' | 'anonymous';
 
 interface ChatRoom {
-    _id: string;
-    name?: string;
+    id: string;
+    _id?: string;
+    name: string;
     type: ChatRoomType;
     createdAt: string;
     updatedAt: string;
@@ -10,11 +11,19 @@ interface ChatRoom {
     participantCount?: number;
 }
 
-
 interface Message {
     senderId: string;
+    senderUsername?: string;
     message: string;
-    type?: 'user' | 'system'
+    roomId: string;
+    type?: 'user' | 'system';
+    timestamp?: string;
+}
+
+interface OnlineMember {
+    userId: string;
+    username: string;
+    roomId: string;
 }
 
 interface User {

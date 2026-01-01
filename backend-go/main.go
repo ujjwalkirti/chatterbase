@@ -5,12 +5,13 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 
-	"github.com/your-username/chatterbase-backend-go/config"
-	"github.com/your-username/chatterbase-backend-go/controllers"
-	"github.com/your-username/chatterbase-backend-go/services/socket"
+	"github.com/ujjwalkirti/chatterbase-backend-go/config"
+	"github.com/ujjwalkirti/chatterbase-backend-go/controllers"
+	"github.com/ujjwalkirti/chatterbase-backend-go/services/socket"
 )
 
 func main() {
@@ -24,6 +25,20 @@ func main() {
 
 	r := gin.Default()
 
+	// enable CORS (allow localhost:3000 by default or use CORS_ORIGIN env var comma-separated)
+	corsOrigin := os.Getenv("CORS_ORIGIN")
+	if corsOrigin == "" {
+		corsOrigin = "http://localhost:3000"
+	}
+	corsConfig := cors.Config{
+		AllowOrigins:     []string{corsOrigin},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+	}
+	r.Use(cors.New(corsConfig))
+
 	// health
 	r.GET("/health", func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"status": "ok"}) })
 
@@ -36,13 +51,12 @@ func main() {
 	controllers.RegisterRoutes(api)
 	controllers.RegisterChatRoutes(api)
 
-	// websocket
+	// Socket.IO
 	ss := socket.New()
-	r.GET("/ws", func(c *gin.Context) {
-		h := c.Writer
-		rq := c.Request
-		ss.ServeWS(h, rq)
-	})
+	defer ss.Close()
+
+	r.GET("/socket.io/*any", gin.WrapH(ss))
+	r.POST("/socket.io/*any", gin.WrapH(ss))
 
 	log.Printf("Starting server on :%s", port)
 	r.Run("0.0.0.0:" + port)

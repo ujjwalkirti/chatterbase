@@ -7,11 +7,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
-	"go.mongodb.org/mongo-driver/bson"
 
-	"github.com/your-username/chatterbase-backend-go/config"
-	"github.com/your-username/chatterbase-backend-go/models"
-	"github.com/your-username/chatterbase-backend-go/services"
+	"github.com/ujjwalkirti/chatterbase-backend-go/config"
+	"github.com/ujjwalkirti/chatterbase-backend-go/models"
+	"github.com/ujjwalkirti/chatterbase-backend-go/services"
 )
 
 func RegisterRoutes(rg *gin.RouterGroup) {
@@ -65,7 +64,25 @@ func register(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"success": true, "message": "User registered successfully", "data": gin.H{"token": tok}})
 }
 
+// verify checks whether a provided JWT token is valid and not expired.
+//
+// Expected request body JSON:
+//
+//	{ "token": "<jwt-token>" }
+//
+// Behavior:
+// 1. Parse and validate request body.
+// 2. Look up the token in the `tokens` table and ensure it exists and is not expired.
+//   - If the token is not found or already expired, respond 401 Unauthorized.
+//
+// 3. Verify the JWT's signature and expiration using `services.VerifyToken`.
+//   - If the JWT has expired, mirror the Node behavior: mark the token as expired in DB
+//     and remove the corresponding user record (best-effort). Then respond 401.
+//   - Any other verification error also results in 401.
+//
+// 4. If verification succeeds, return 200 with the decoded claims in `data`.
 func verify(c *gin.Context) {
+	// Bind request body
 	var body struct {
 		Token string `json:"token"`
 	}
@@ -73,29 +90,43 @@ func verify(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"success": false, "message": "Invalid body"})
 		return
 	}
+
+	// Short-lived DB context for the query
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	tokens := config.Client.Database("chatterbase").Collection("tokens")
+
+	// Ensure the token exists in DB and is not marked expired (Postgres)
+	tokens := config.Pool
 	var t models.Token
-	if err := tokens.FindOne(ctx, bson.M{"token": body.Token, "expired": false}).Decode(&t); err != nil {
+	row := tokens.QueryRow(ctx, "SELECT id, username FROM tokens WHERE token=$1 AND expired=false", body.Token)
+	if err := row.Scan(&t.ID, &t.Username); err != nil {
+		// Token not found or already expired
 		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "message": "Invalid token"})
 		return
 	}
+
+	// Verify JWT signature and expiry
 	claims, err := services.VerifyToken(body.Token)
 	if err != nil {
-		// expired or invalid
-		// If token expired, mirror Node behaviour: delete user and mark token expired
+		// If token has expired, attempt to mirror original behavior:
+		// mark DB token expired and remove associated user (best-effort cleanup).
 		if err == services.ErrTokenExpired {
-			// attempt to decode username from token
 			if parsed, perr := services.ParseToken(body.Token); perr == nil {
-				username := parsed["username"].(string)
-				config.Pool.Exec(ctx, "UPDATE tokens SET expired=true WHERE token=$1", body.Token)
-				config.Pool.Exec(ctx, "DELETE FROM users WHERE username=$1", username)
+				// parsed should be a map of claims; attempt to safely extract username
+				if un, ok := parsed["username"].(string); ok && un != "" {
+					// Mark token expired and delete user; ignore errors (best-effort)
+					config.Pool.Exec(ctx, "UPDATE tokens SET expired=true WHERE token=$1", body.Token)
+					config.Pool.Exec(ctx, "DELETE FROM users WHERE username=$1", un)
+				}
 			}
 		}
+
+		// Any verification error results in unauthorized
 		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "message": "Invalid token"})
 		return
 	}
+
+	// Token valid — return decoded claims
 	c.JSON(http.StatusOK, gin.H{"success": true, "message": "Token is valid", "data": claims})
 }
 

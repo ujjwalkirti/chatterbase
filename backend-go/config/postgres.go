@@ -91,6 +91,18 @@ func runMigrations(ctx context.Context) error {
 			participant_count INTEGER DEFAULT 0,
 			participants TEXT[] DEFAULT '{}'
 		);`,
+
+		`CREATE TABLE IF NOT EXISTS messages (
+			id SERIAL PRIMARY KEY,
+			room_id TEXT NOT NULL,
+			sender_id TEXT NOT NULL,
+			message TEXT NOT NULL,
+			type TEXT DEFAULT 'user',
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		);`,
+
+		`CREATE INDEX IF NOT EXISTS idx_messages_room_id ON messages(room_id);`,
+		`CREATE INDEX IF NOT EXISTS idx_messages_created_at ON messages(created_at);`,
 	}
 
 	for _, q := range queries {
