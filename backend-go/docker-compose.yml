@@ -1,0 +1,29 @@
+version: '3.8'
+services:
+  mongo:
+    image: mongo:6
+    restart: unless-stopped
+    volumes:
+      - mongo-data:/data/db
+    ports:
+      - 27017:27017
+  redis:
+    image: redis:7
+    restart: unless-stopped
+    ports:
+      - 6379:6379
+  backend-go:
+    build: .
+    environment:
+      - PORT=8000
+      - MONGO_URI=mongodb://mongo:27017/chatterbase
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - ACCESS_TOKEN_SECRET=change_this_secret
+    ports:
+      - 8000:8000
+    depends_on:
+      - mongo
+      - redis
+volumes:
+  mongo-data:

@@ -46,3 +46,31 @@ next-env.d.ts
 dist
 
 node_modules
+
+# Go
+/bin
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+vendor/
+*.test
+coverage.out
+
+# Docker
+docker-compose.override.yml
+
+# IDEs
+.vscode/
+.idea/
+*.iml
+
+# Logs
+*.log
+
+# Go binary (build output)
+/chatter-backend-go
+
+# OS files
+.DS_Store
