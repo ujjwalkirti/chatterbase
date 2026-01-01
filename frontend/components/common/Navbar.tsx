@@ -4,6 +4,7 @@ import Link from "next/link";
 import { LogOutIcon } from "lucide-react";
 import ChatroomsDialog from "./ChatroomsDialog";
 import { authContext } from "@/contexts/AuthProvider";
+import { ModeToggle } from "@/components/mode-toggle";
 
 function Navbar() {
 	// const navLinks = [];
@@ -13,6 +14,7 @@ function Navbar() {
 			<nav className="w-full lg:w-3/5 mx-auto flex items-center justify-between p-2">
 				<Link href="/" className="font-bold text-2xl">Chatter-Base</Link>
 				<div className="flex items-center gap-4">
+					<ModeToggle />
 					<ChatroomsDialog />
 					{/* {navLinks.map((link) => {
 						return (
