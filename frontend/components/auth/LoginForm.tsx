@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { Loader2Icon, MessagesSquareIcon, MoveUpRightIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { getBrowser, getDeviceType, getOS } from "@/utils/functions/deviceDetails";
+import { signIn } from "next-auth/react";
 
 interface LoginFormProps {
 	currentIPAddress: string;
@@ -51,41 +52,34 @@ export default function LoginForm({ currentIPAddress }: LoginFormProps) {
 		const { username, dob, gender } = data;
 
 		try {
-			const response: any = await fetch(process.env.NEXT_PUBLIC_API_URL + "/api/auth/register", {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify({
-					username,
-					dob,
-					gender,
-					deviceDetails: {
-						ipAddress: currentIPAddress,
-						currentOS: getOS(),
-						browser: getBrowser(),
-						deviceType: getDeviceType(),
-						timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-						language: navigator.language,
-						userAgent: navigator.userAgent,
-					},
-				}),
+			const deviceDetails = {
+				ipAddress: currentIPAddress,
+				currentOS: getOS(),
+				browser: getBrowser(),
+				deviceType: getDeviceType(),
+				timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+				language: navigator.language,
+				userAgent: navigator.userAgent,
+			};
+
+			const result = await signIn("credentials", {
+				username,
+				dob: dob.toISOString(),
+				gender,
+				deviceDetails: JSON.stringify(deviceDetails),
+				redirect: false,
 			});
-			const data = await response.json();
-			if (data.success) {
-				toast("Registration Successful", { description: data.message });
-				localStorage.setItem("chatter_base_token", data.data.token);
-				// get last url if stored in localstorage
-				const lastUrl = localStorage.getItem("lastUrl");
-				if (lastUrl) {
-					router.push(lastUrl);
-					return;
-				}
-				router.push("/available-chatrooms");
+
+			if (result?.error) {
+				toast("Registration Failed", { description: "Please try again" });
 				return;
 			}
-			toast("Registration Failed", { description: data.message });
 
+			if (result?.ok) {
+				toast("Registration Successful", { description: "Welcome to Chatter Base!" });
+				router.push("/available-chatrooms");
+				router.refresh();
+			}
 		} catch (error: any) {
 			console.log(error);
 			toast("Registration Failed", { description: "Please try again" });
