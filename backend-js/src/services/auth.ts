@@ -2,13 +2,20 @@ import { MongooseError } from "mongoose";
 import jwt from "jsonwebtoken";
 import Token from "../models/Token";
 import User from "../models/User";
-
+interface IUserDetails {
+  username: string;
+  dob: string;
+  email: string;
+  password: string;
+  gender: string;
+  ip_address: string;
+}
 class AuthService {
-  constructor() {}
+  constructor() { }
 
-  async register(userDetails: any, deviceDetails: any) {
+  async register(userDetails: IUserDetails, deviceDetails: any) {
     try {
-      const requiredFields = ["username", "dob", "gender"];
+      const requiredFields = ["username", "dob", "gender", "password"];
 
       if (
         !userDetails ||
@@ -79,6 +86,7 @@ class AuthService {
       } else {
         const user = await User.create({
           ...userDetails,
+          deviceDetails,
         });
 
         // create the token and send back as response

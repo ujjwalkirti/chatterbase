@@ -8,11 +8,13 @@ const authService = new AuthService();
 
 authRouter.post("/register", async (req: Request, res: Response) => {
   try {
-    const { username, dob, gender, ip_address, deviceDetails } = req.body;
+    const { username, dob, password, email, gender, ip_address, deviceDetails } = req.body;
 
     const userDetails = {
       username,
       dob,
+      email,
+      password,
       gender,
       ip_address,
     };

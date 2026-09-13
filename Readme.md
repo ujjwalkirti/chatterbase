@@ -163,3 +163,18 @@ Pull requests and issues are welcome! Please open an issue to discuss major chan
 ## 📞 Contact
 
 For questions or feedback, open an issue on GitHub or contact the maintainer.
+
+
+
+  ### 1. Start the Redis Server (First)
+
+  The backend requires Redis for pub/sub messaging. Since Redis runs locally as a standalone service, start it in a
+  separate terminal:
+
+    & "C:\Users\kirti\redis\Redis-8.10.1-Windows-x64-msys2\redis-server.exe"
+
+  │ Verification (Optional): In any terminal, verify it is responding:
+  │
+  │   & "C:\Users\kirti\redis\Redis-8.10.1-Windows-x64-msys2\redis-cli.exe" ping
+  │   # Should return: PONG
+  ──────

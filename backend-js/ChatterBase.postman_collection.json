@@ -1,0 +1,283 @@
+{
+	"info": {
+		"_postman_id": "a8c9e1e2-54bc-4187-b9c2-chatterbase01",
+		"name": "ChatterBase API",
+		"description": "Complete Postman collection for ChatterBase backend API, including Authentication and Chatrooms endpoints with sample request payloads, pre-request scripts, and test scripts to automatically capture and reuse JWT tokens.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Auth",
+			"description": "Authentication endpoints for ephemeral anonymous user registration, token verification, and logout session cleanup.",
+			"item": [
+				{
+					"name": "Register User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const jsonData = pm.response.json();",
+									"if (jsonData.success && jsonData.data && jsonData.data.token) {",
+									"    pm.collectionVariables.set(\"accessToken\", jsonData.data.token);",
+									"    console.log(\"Saved accessToken:\", jsonData.data.token);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"alex_doe\",\n  \"dob\": \"1998-05-15\",\n  \"gender\": \"male\",\n  \"password\": \"Password123!\",\n  \"ip_address\": \"127.0.0.1\",\n  \"deviceDetails\": {\n    \"browser\": \"Chrome\",\n    \"os\": \"Windows 11\",\n    \"screenResolution\": \"1920x1080\",\n    \"userAgent\": \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36\"\n  }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/register",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"register"
+							]
+						},
+						"description": "Registers a new user (or issues a new token if an expired token existed). The test script automatically saves the returned JWT into the `{{accessToken}}` collection variable."
+					},
+					"response": []
+				},
+				{
+					"name": "Verify Token",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"token\": \"{{accessToken}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/verify",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"verify"
+							]
+						},
+						"description": "Validates whether the provided JWT token is valid and unexpired in the database."
+					},
+					"response": []
+				},
+				{
+					"name": "Logout",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"token\": \"{{accessToken}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/logout",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"logout"
+							]
+						},
+						"description": "Marks the session token as expired and cleans up the anonymous user from MongoDB."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Chatrooms",
+			"description": "Chatroom discovery, creation, and joining endpoints.",
+			"item": [
+				{
+					"name": "Get All Chatrooms",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const jsonData = pm.response.json();",
+									"if (jsonData.success && Array.isArray(jsonData.data) && jsonData.data.length > 0) {",
+									"    pm.collectionVariables.set(\"chatroomId\", jsonData.data[0]._id);",
+									"    console.log(\"Saved first chatroomId:\", jsonData.data[0]._id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/chatroom",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"chatroom"
+							]
+						},
+						"description": "Fetches all available chatrooms sorted by participant count. Automatically captures the first chatroom's `_id` into `{{chatroomId}}` if available."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Chatroom",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const jsonData = pm.response.json();",
+									"if (jsonData.success && jsonData.data && jsonData.data._id) {",
+									"    pm.collectionVariables.set(\"chatroomId\", jsonData.data._id);",
+									"    console.log(\"Saved created chatroomId:\", jsonData.data._id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"chatRoomDetails\": {\n    \"name\": \"Developers Hub\",\n    \"type\": \"public\",\n    \"isPermanent\": false\n  }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/chatroom/create",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"chatroom",
+								"create"
+							]
+						},
+						"description": "Creates a new chatroom. Automatically saves the created chatroom's `_id` to the `{{chatroomId}}` collection variable."
+					},
+					"response": []
+				},
+				{
+					"name": "Enter Chatroom",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{accessToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"chatroomId\": \"{{chatroomId}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/chatroom/enter",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"chatroom",
+								"enter"
+							]
+						},
+						"description": "Protected endpoint requiring `Authorization: Bearer {{accessToken}}`. Increments participant count, adds user to chatroom participants, and publishes a `JOIN-GROUPS` event to Redis."
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8000",
+			"type": "string"
+		},
+		{
+			"key": "accessToken",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "chatroomId",
+			"value": "",
+			"type": "string"
+		}
+	]
+}
