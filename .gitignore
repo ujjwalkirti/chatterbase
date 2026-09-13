@@ -74,3 +74,11 @@ docker-compose.override.yml
 
 # OS files
 .DS_Store
+
+
+.agents/
+
+docs/
+
+
+skills-lock.json
