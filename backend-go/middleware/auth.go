@@ -1,22 +1,22 @@
-package middlewares
+package middleware
 
 import (
 	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/ujjwalkirti/chatterbase-backend-go/services"
+	"github.com/ujjwalkirti/chatterbase-backend-go/auth"
 )
 
 func JWTAuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		auth := c.GetHeader("Authorization")
-		if auth == "" || !strings.HasPrefix(auth, "Bearer ") {
+		authHeader := c.GetHeader("Authorization")
+		if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"success": false, "message": "Unauthorized"})
 			return
 		}
-		token := strings.TrimPrefix(auth, "Bearer ")
-		claims, err := services.VerifyToken(token)
+		token := strings.TrimPrefix(authHeader, "Bearer ")
+		claims, err := auth.VerifyToken(token)
 		if err != nil || claims == nil {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"success": false, "message": "Unauthorized"})
 			return

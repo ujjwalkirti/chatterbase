@@ -1,4 +1,4 @@
-package models
+package chatroom
 
 import (
 	"context"
@@ -6,6 +6,14 @@ import (
 
 	"github.com/ujjwalkirti/chatterbase-backend-go/config"
 )
+
+type Chatroom struct {
+	ID               int64    `json:"id"`
+	Name             string   `json:"name"`
+	Description      string   `json:"description"`
+	ParticipantCount int      `json:"participantCount"`
+	Participants     []string `json:"participants"`
+}
 
 type Message struct {
 	ID        int64     `json:"id"`

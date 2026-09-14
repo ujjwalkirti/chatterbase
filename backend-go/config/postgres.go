@@ -67,12 +67,26 @@ func runMigrations(ctx context.Context) error {
 	queries := []string{
 		`CREATE TABLE IF NOT EXISTS users (
 			id SERIAL PRIMARY KEY,
-			username TEXT UNIQUE NOT NULL,
+			username TEXT NOT NULL,
+			email TEXT,
 			dob TEXT,
 			gender TEXT,
+			password TEXT,
 			ip_address TEXT,
-			user_status TEXT
+			device_details JSONB,
+			user_status TEXT DEFAULT 'anonymous',
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 		);`,
+		`ALTER TABLE users DROP CONSTRAINT IF EXISTS users_username_key;`,
+		`ALTER TABLE users ADD COLUMN IF NOT EXISTS email TEXT;`,
+		`ALTER TABLE users ADD COLUMN IF NOT EXISTS password TEXT;`,
+		`ALTER TABLE users ADD COLUMN IF NOT EXISTS device_details JSONB;`,
+		`ALTER TABLE users ADD COLUMN IF NOT EXISTS user_status TEXT DEFAULT 'anonymous';`,
+		`ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;`,
+		`ALTER TABLE users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;`,
+		`CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username_permanent ON users(username) WHERE user_status = 'permanent';`,
+		`CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email_permanent ON users(email) WHERE user_status = 'permanent';`,
 
 		`CREATE TABLE IF NOT EXISTS tokens (
 			id SERIAL PRIMARY KEY,

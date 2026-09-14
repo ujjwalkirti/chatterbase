@@ -24,6 +24,7 @@
 # misc
 .DS_Store
 *.pem
+*.rdb
 
 # debug
 npm-debug.log*
@@ -77,8 +78,5 @@ docker-compose.override.yml
 
 
 .agents/
-
-docs/
-
 
 skills-lock.json

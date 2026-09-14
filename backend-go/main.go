@@ -9,9 +9,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 
+	"github.com/ujjwalkirti/chatterbase-backend-go/auth"
+	"github.com/ujjwalkirti/chatterbase-backend-go/chatroom"
 	"github.com/ujjwalkirti/chatterbase-backend-go/config"
-	"github.com/ujjwalkirti/chatterbase-backend-go/controllers"
-	"github.com/ujjwalkirti/chatterbase-backend-go/services/socket"
+	"github.com/ujjwalkirti/chatterbase-backend-go/socket"
 )
 
 func main() {
@@ -46,10 +47,10 @@ func main() {
 	config.InitPostgres()
 	config.InitRedis()
 
-	// mount API groups (controllers)
+	// mount API groups (domain routes)
 	api := r.Group("/api")
-	controllers.RegisterRoutes(api)
-	controllers.RegisterChatRoutes(api)
+	auth.RegisterRoutes(api)
+	chatroom.RegisterRoutes(api)
 
 	// Socket.IO
 	ss := socket.New()
