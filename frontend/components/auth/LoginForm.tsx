@@ -71,18 +71,21 @@ export default function LoginForm({ currentIPAddress }: LoginFormProps) {
 			});
 
 			if (result?.error) {
-				toast("Registration Failed", { description: "Please try again" });
+				const description = result.code && result.code !== "credentials"
+					? result.code
+					: "Registration failed. Please try again.";
+				toast.error("Registration Failed", { description });
 				return;
 			}
 
 			if (result?.ok) {
-				toast("Registration Successful", { description: "Welcome to Chatter Base!" });
+				toast.success("Registration Successful", { description: "Welcome to Chatter Base!" });
 				router.push("/available-chatrooms");
 				router.refresh();
 			}
 		} catch (error: any) {
-			console.log(error);
-			toast("Registration Failed", { description: "Please try again" });
+			console.error(error);
+			toast.error("Registration Failed", { description: error?.message || "Please try again" });
 		}
 	};
 

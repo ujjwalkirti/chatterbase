@@ -3,15 +3,24 @@ package auth
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/ujjwalkirti/chatterbase-backend-go/config"
 )
 
-const GuestKeyPrefix = "active_guest:"
+const (
+	GuestKeyPrefix         = "active_guest:"
+	DefaultGuestSessionTTL = 5 * time.Minute
+)
+
+// NormalizeGuestUsername returns a trimmed, lowercased username for presence locking.
+func NormalizeGuestUsername(username string) string {
+	return strings.ToLower(strings.TrimSpace(username))
+}
 
 func guestKey(username string) string {
-	return GuestKeyPrefix + username
+	return GuestKeyPrefix + NormalizeGuestUsername(username)
 }
 
 // AcquireGuestUsername attempts to lock a guest username atomically in Redis with a TTL.

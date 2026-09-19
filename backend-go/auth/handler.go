@@ -21,6 +21,7 @@ func RegisterRoutes(rg *gin.RouterGroup) {
 	auth.POST("/register-permanent", registerPermanent)
 	auth.POST("/login-permanent", loginPermanent)
 	auth.POST("/register", register)
+	auth.POST("/heartbeat", guestHeartbeat)
 	auth.POST("/verify", verify)
 	auth.POST("/logout", logout)
 }
@@ -75,8 +76,8 @@ func guestLogin(c *gin.Context) {
 		return
 	}
 
-	// 5. Acquire Redis lock with 2-minute TTL
-	acquired, err := AcquireGuestUsername(ctx, body.Username, userID, 2*time.Minute)
+	// 5. Acquire Redis lock with default TTL
+	acquired, err := AcquireGuestUsername(ctx, body.Username, userID, DefaultGuestSessionTTL)
 	if err != nil || !acquired {
 		// Rollback/archive user if lock acquisition failed
 		_ = ReleaseGuestUsername(ctx, body.Username, userID)
@@ -384,22 +385,56 @@ func register(c *gin.Context) {
 		return
 	}
 
+	// Check if username is currently locked by an active guest in Redis
+	active, err := IsGuestActive(ctx, guestReq.Username)
+	if err == nil && active {
+		c.JSON(http.StatusConflict, gin.H{"success": false, "message": "Username is currently in use"})
+		return
+	}
+
 	var deviceJSON []byte
 	if guestReq.DeviceDetails != nil {
 		deviceJSON, _ = json.Marshal(guestReq.DeviceDetails)
 	}
 
 	var userID int64
-	_ = config.Pool.QueryRow(ctx,
+	err = config.Pool.QueryRow(ctx,
 		"INSERT INTO users (username, dob, gender, ip_address, device_details, user_status) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id",
 		guestReq.Username, guestReq.DOB, guestReq.Gender, guestReq.IPAddress, deviceJSON, UserStatusAnonymous,
 	).Scan(&userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "message": "Failed to create guest user"})
+		return
+	}
 
-	_, _ = AcquireGuestUsername(ctx, guestReq.Username, userID, 2*time.Minute)
+	acquired, err := AcquireGuestUsername(ctx, guestReq.Username, userID, DefaultGuestSessionTTL)
+	if err != nil || !acquired {
+		_ = ReleaseGuestUsername(ctx, guestReq.Username, userID)
+		c.JSON(http.StatusConflict, gin.H{"success": false, "message": "Username is currently in use"})
+		return
+	}
 
-	tok, _ := GenerateToken(body.Username, body.Gender, body.DOB, UserStatusAnonymous)
+	tok, err := GenerateToken(body.Username, body.Gender, body.DOB, UserStatusAnonymous)
+	if err != nil {
+		_ = ReleaseGuestUsername(ctx, guestReq.Username, userID)
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "message": "Failed to generate token"})
+		return
+	}
 	_, _ = config.Pool.Exec(ctx, "INSERT INTO tokens (username, token, device_fingerprint) VALUES ($1,$2,$3)", body.Username, tok, "")
-	c.JSON(http.StatusOK, gin.H{"success": true, "message": "User registered successfully", "data": gin.H{"token": tok}})
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "User registered successfully",
+		"data": gin.H{
+			"token": tok,
+			"user": gin.H{
+				"id":          userID,
+				"username":    body.Username,
+				"dob":         body.DOB,
+				"gender":      body.Gender,
+				"user_status": UserStatusAnonymous,
+			},
+		},
+	})
 }
 
 // verify checks whether a provided JWT token is valid and not expired.
@@ -473,3 +508,46 @@ func logout(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"success": true, "message": "User logged out successfully"})
 }
+
+// guestHeartbeat renews the active Redis lock TTL for an active guest session
+func guestHeartbeat(c *gin.Context) {
+	var body struct {
+		Token string `json:"token"`
+	}
+	_ = c.ShouldBindJSON(&body)
+	tokenStr := body.Token
+	if tokenStr == "" {
+		authHeader := c.GetHeader("Authorization")
+		if strings.HasPrefix(authHeader, "Bearer ") {
+			tokenStr = strings.TrimPrefix(authHeader, "Bearer ")
+		}
+	}
+	if tokenStr == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "message": "Token is required"})
+		return
+	}
+
+	claims, err := VerifyToken(tokenStr)
+	if err != nil || claims == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "message": "Invalid token"})
+		return
+	}
+
+	username, _ := claims["username"].(string)
+	userStatus, _ := claims["user_status"].(string)
+	if username == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "message": "Username missing from token"})
+		return
+	}
+
+	if userStatus == UserStatusAnonymous {
+		renewed, err := RenewGuestHeartbeat(c.Request.Context(), username, DefaultGuestSessionTTL)
+		if err != nil || !renewed {
+			c.JSON(http.StatusConflict, gin.H{"success": false, "message": "Guest session expired or not found"})
+			return
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{"success": true, "message": "Heartbeat acknowledged"})
+}
+

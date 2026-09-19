@@ -1,4 +1,4 @@
-﻿# AGENTS.md - ChatterBase Agent Operational Guidelines
+# AGENTS.md - ChatterBase Agent Operational Guidelines
 
 > **Notice for AI Agents**: This file defines the architectural rules, technology stack conventions, directory boundaries, development workflows, and strict behavioral standards for any AI agent working on ChatterBase. Adherence is mandatory.
 
@@ -101,6 +101,11 @@ chatterbase/
 - Always load from `process.env` and ensure `.env` and `.env.local` are in `.gitignore`.
 - Follow the `accidental-data-loss-prevention` skill: never run destructive DB drops (`User.collection.drop()`, `redis-cli flushall`) without explicit user permission.
 
+### Rule 5: Frontend Build Constraint
+- **Do NOT run `npm run build` or Next.js production build commands on the frontend unless the user explicitly requests it.**
+- Because the user runs the dev server locally, full frontend builds are slow and unnecessary. Rely on TypeScript typechecks (`npx tsc --noEmit`) or targeted tests instead, and never trigger a frontend production build without explicit user instruction.
+
+
 ---
 
 ## 5. Domain Architecture: Dual Authentication Flow
@@ -159,7 +164,7 @@ type UserStatus = "anonymous" | "permanent";
    ```
 
 ### Verification & Testing Commands
-- **Backend Typecheck / Build**: `cd backend; npm run build`
-- **Frontend Lint / Build**: `cd frontend; npm run build`
+- **Backend (Go) Typecheck / Build**: `cd backend-go; go build ./...` and `go test -v ./...`
+- **Frontend Typecheck**: `cd frontend; npx tsc --noEmit` (Do NOT run `npm run build` unless explicitly requested)
 - **Redis Health Check**: `& "C:\Users\kirti\redis\Redis-8.10.1-Windows-x64-msys2\redis-cli.exe" ping`
-- **MongoDB Connection Check**: Ensure `MONGO_URI` is reachable on port `27017`.
+- **PostgreSQL Connection Check**: Ensure `DATABASE_URL` is reachable on port `5432`.

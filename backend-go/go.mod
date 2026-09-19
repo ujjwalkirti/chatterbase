@@ -59,7 +59,7 @@ require (
 	github.com/zishang520/webtransport-go v0.9.1 // indirect
 	go.uber.org/mock v0.5.0 // indirect
 	golang.org/x/arch v0.18.0 // indirect
-	golang.org/x/crypto v0.57.0 // indirect
+	golang.org/x/crypto v0.57.0
 	golang.org/x/mod v0.41.0 // indirect
 	golang.org/x/net v0.58.0 // indirect
 	golang.org/x/sync v0.23.0 // indirect

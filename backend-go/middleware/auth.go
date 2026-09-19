@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"context"
 	"net/http"
 	"strings"
 
@@ -22,6 +23,14 @@ func JWTAuthMiddleware() gin.HandlerFunc {
 			return
 		}
 		c.Set("user", claims)
+
+		// Renew guest presence on every authenticated HTTP request
+		if status, ok := claims["user_status"].(string); ok && status == auth.UserStatusAnonymous {
+			if username, ok := claims["username"].(string); ok && username != "" {
+				_, _ = auth.RenewGuestHeartbeat(context.Background(), username, auth.DefaultGuestSessionTTL)
+			}
+		}
+
 		c.Next()
 	}
 }

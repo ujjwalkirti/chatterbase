@@ -40,6 +40,51 @@ function AuthContextProvider({ children }: { children: React.ReactNode }) {
 		accessToken: session.user.accessToken,
 	} : null;
 
+	useEffect(() => {
+		if (!user?.username || !user?.accessToken) return;
+
+		const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+		// 1. Send heartbeat every 30 seconds to keep guest session presence active
+		const interval = setInterval(async () => {
+			try {
+				await fetch(`${apiUrl}/api/auth/heartbeat`, {
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+						Authorization: `Bearer ${user.accessToken}`,
+					},
+					body: JSON.stringify({ token: user.accessToken }),
+				});
+			} catch (err) {
+				console.error("Presence heartbeat error:", err);
+			}
+		}, 30000);
+
+		// 2. Beacon on tab/browser close to release guest lock immediately
+		const handleBeforeUnload = () => {
+			const payload = JSON.stringify({ token: user.accessToken });
+			if (navigator.sendBeacon) {
+				const blob = new Blob([payload], { type: "application/json" });
+				navigator.sendBeacon(`${apiUrl}/api/auth/guest-logout`, blob);
+			} else {
+				fetch(`${apiUrl}/api/auth/guest-logout`, {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: payload,
+					keepalive: true,
+				});
+			}
+		};
+
+		window.addEventListener("beforeunload", handleBeforeUnload);
+
+		return () => {
+			clearInterval(interval);
+			window.removeEventListener("beforeunload", handleBeforeUnload);
+		};
+	}, [user?.username, user?.accessToken]);
+
 	return (
 		<authContext.Provider value={{ user, isLoading }}>
 			{children}

@@ -6,7 +6,6 @@ import (
 	"log"
 	"net/http"
 	"sync"
-	"time"
 
 	"github.com/redis/go-redis/v9"
 	"github.com/ujjwalkirti/chatterbase-backend-go/auth"
@@ -139,6 +138,14 @@ func New() *SocketServer {
 					ss.socketUsers[socketId] = userId
 					ss.memberMu.Unlock()
 
+					// Track guest presence if userId matches an active guest
+					if active, _ := auth.IsGuestActive(context.Background(), userId); active {
+						ss.guestMu.Lock()
+						ss.socketGuests[socketId] = userId
+						ss.guestMu.Unlock()
+						_, _ = auth.RenewGuestHeartbeat(context.Background(), userId, auth.DefaultGuestSessionTTL)
+					}
+
 					member := OnlineMember{
 						UserId:   userId,
 						Username: userId,
@@ -185,6 +192,14 @@ func New() *SocketServer {
 					ss.socketRooms[socketId] = append(ss.socketRooms[socketId], roomId)
 				}
 				ss.memberMu.Unlock()
+
+				// Track guest presence if username matches an active guest
+				if active, _ := auth.IsGuestActive(context.Background(), username); active {
+					ss.guestMu.Lock()
+					ss.socketGuests[socketId] = username
+					ss.guestMu.Unlock()
+					_, _ = auth.RenewGuestHeartbeat(context.Background(), username, auth.DefaultGuestSessionTTL)
+				}
 
 				client.Join(socket.Room(roomId))
 
@@ -283,7 +298,7 @@ func New() *SocketServer {
 				ss.guestMu.Lock()
 				ss.socketGuests[socketId] = username
 				ss.guestMu.Unlock()
-				_, _ = auth.RenewGuestHeartbeat(context.Background(), username, 2*time.Minute)
+				_, _ = auth.RenewGuestHeartbeat(context.Background(), username, auth.DefaultGuestSessionTTL)
 			}
 		})
 

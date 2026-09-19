@@ -1,5 +1,13 @@
-import NextAuth from "next-auth"
+import NextAuth, { CredentialsSignin } from "next-auth"
 import Credentials from "next-auth/providers/credentials"
+
+class CustomAuthError extends CredentialsSignin {
+  code: string
+  constructor(message: string) {
+    super(message)
+    this.code = message
+  }
+}
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
@@ -47,8 +55,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             }
           }
 
-          return null
+          throw new CustomAuthError(data.message || "Registration failed")
         } catch (error) {
+          if (error instanceof CredentialsSignin) {
+            throw error
+          }
           console.error("Auth error:", error)
           return null
         }

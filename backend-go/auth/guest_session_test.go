@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -88,3 +89,30 @@ func TestGuestSessionLifecycle(t *testing.T) {
 		t.Fatalf("expected user_status to be %q, got %q", UserStatusArchived, status)
 	}
 }
+
+func TestGuestSessionCaseInsensitivity(t *testing.T) {
+	if config.RedisClient == nil {
+		t.Skip("Redis not available")
+	}
+	ctx := context.Background()
+	username := fmt.Sprintf("CaseUser_%d", time.Now().UnixNano())
+
+	acquired, err := AcquireGuestUsername(ctx, username, 101, DefaultGuestSessionTTL)
+	if err != nil || !acquired {
+		t.Fatalf("failed to acquire username: %v", err)
+	}
+	defer ReleaseGuestUsername(ctx, username, 101)
+
+	// Checking lowercase version must report active
+	lowerActive, err := IsGuestActive(ctx, strings.ToLower(username))
+	if err != nil || !lowerActive {
+		t.Fatalf("expected lowercase username to be active")
+	}
+
+	// Checking uppercase version must report active
+	upperActive, err := IsGuestActive(ctx, strings.ToUpper(username))
+	if err != nil || !upperActive {
+		t.Fatalf("expected uppercase username to be active")
+	}
+}
+

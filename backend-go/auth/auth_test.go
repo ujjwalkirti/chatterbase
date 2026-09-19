@@ -381,3 +381,47 @@ func TestGuestLogout(t *testing.T) {
 	}
 }
 
+func TestGuestHeartbeatEndpoint(t *testing.T) {
+	router := setupTestRouter()
+	username := fmt.Sprintf("hb_user_%d", time.Now().UnixNano())
+
+	// Acquire initial session
+	_, _ = AcquireGuestUsername(context.Background(), username, 1, 10*time.Second)
+	token, _ := GenerateToken(username, "male", "2000-01-01", UserStatusAnonymous)
+
+	payload := map[string]interface{}{"token": token}
+	body, _ := json.Marshal(payload)
+	req, _ := http.NewRequest(http.MethodPost, "/api/auth/heartbeat", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK from heartbeat, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestRegister_BlocksActiveGuest(t *testing.T) {
+	router := setupTestRouter()
+	username := fmt.Sprintf("reg_block_%d", time.Now().UnixNano())
+
+	// Simulate active guest
+	_, _ = AcquireGuestUsername(context.Background(), username, 1, DefaultGuestSessionTTL)
+
+	payload := map[string]interface{}{
+		"username": username,
+		"dob":      "2000-01-01",
+		"gender":   "other",
+	}
+	body, _ := json.Marshal(payload)
+	req, _ := http.NewRequest(http.MethodPost, "/api/auth/register", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusConflict {
+		t.Fatalf("expected 409 Conflict when registering active guest username, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+
