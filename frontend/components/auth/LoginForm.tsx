@@ -13,6 +13,7 @@ import { Loader2Icon, MessagesSquareIcon, MoveUpRightIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { getBrowser, getDeviceType, getOS } from "@/utils/functions/deviceDetails";
 import { signIn } from "next-auth/react";
+import Link from "next/link";
 
 interface LoginFormProps {
 	currentIPAddress: string;
@@ -29,7 +30,7 @@ const FormSchema = z.object({
 		},
 		{
 			message: "You must be at least 18 years old.",
-		}
+		},
 	),
 	gender: z.enum(["male", "female", "transgender", "couple", "other"], {
 		required_error: "Gender is required",
@@ -71,9 +72,7 @@ export default function LoginForm({ currentIPAddress }: LoginFormProps) {
 			});
 
 			if (result?.error) {
-				const description = result.code && result.code !== "credentials"
-					? result.code
-					: "Registration failed. Please try again.";
+				const description = result.code && result.code !== "credentials" ? result.code : "Registration failed. Please try again.";
 				toast.error("Registration Failed", { description });
 				return;
 			}
@@ -161,6 +160,10 @@ export default function LoginForm({ currentIPAddress }: LoginFormProps) {
 						</>
 					)}
 				</Button>
+
+				<div className="flex gap-1 ">
+					<p>You are logging in as guest, to get a permanent account </p> <Link className="underline" href={"/permanent-login"}>Click Here </Link>
+				</div>
 			</form>
 		</Form>
 	);
