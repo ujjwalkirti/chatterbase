@@ -18,6 +18,7 @@ type OnlineMember struct {
 	UserId   string `json:"userId"`
 	Username string `json:"username"`
 	RoomId   string `json:"roomId"`
+	Type     string `json:"type"`
 }
 
 type SocketServer struct {

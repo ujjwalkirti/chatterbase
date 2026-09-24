@@ -10,7 +10,7 @@ interface SocketProviderProps {
 interface ISocketContext {
 	sendMessage: (message: string, senderId: string, roomId: string) => void;
 	messages: Map<string, Message[]>;
-	joinRoom: (userId: string, roomId: string) => void;
+	joinRoom: (userId: string, roomId: string, type?: string) => void;
 	leaveRoom: (userId: string, roomId: string) => void;
 	isConnected: boolean;
 	currentRoomId: string | null;
@@ -83,9 +83,9 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
 	);
 
 	const joinRoom = useCallback(
-		(userId: string, roomId: string) => {
+		(userId: string, roomId: string, type: string = "user") => {
 			if (socketRef.current) {
-				socketRef.current.emit("join-room", { userId, roomId });
+				socketRef.current.emit("join-room", { userId, roomId, type });
 				setCurrentRoomId(roomId);
 			}
 		},
@@ -191,6 +191,7 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
 		_socket.on("online-members", ({ roomId, members }: { roomId: string; members: OnlineMember[] }) => {
 			setOnlineMembers((prev) => {
 				const newMap = new Map(prev);
+				console.log(members);
 				newMap.set(roomId, members);
 				return newMap;
 			});

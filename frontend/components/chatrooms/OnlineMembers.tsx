@@ -10,7 +10,6 @@ interface OnlineMembersProps {
 function OnlineMembers({ roomId }: OnlineMembersProps) {
     const { getOnlineMembersForRoom, isConnected } = useSocket();
     const onlineMembers = getOnlineMembersForRoom(roomId);
-
     return (
         <div className="flex flex-col gap-3">
             <div className="flex items-center justify-between">
@@ -29,17 +28,24 @@ function OnlineMembers({ roomId }: OnlineMembersProps) {
                     {onlineMembers.map((member) => (
                         <div
                             key={member.userId}
-                            className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                            className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                         >
-                            <Avatar className="w-8 h-8">
-                                <AvatarFallback className="text-xs">
-                                    {member.username.slice(0, 2).toUpperCase()}
-                                </AvatarFallback>
-                            </Avatar>
                             <div className="flex items-center gap-2">
-                                <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                                <span className="text-sm font-medium">{member.username}</span>
+                                <Avatar className="w-8 h-8">
+                                    <AvatarFallback className="text-xs">
+                                        {member.username.slice(0, 2).toUpperCase()}
+                                    </AvatarFallback>
+                                </Avatar>
+                                <div className="flex items-center gap-2">
+                                    <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                                    <span className="text-sm font-medium">{member.username}</span>
+                                </div>
                             </div>
+                            {member.type && (
+                                <span className="text-xs text-gray-500 bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded capitalize">
+                                    {member.type}
+                                </span>
+                            )}
                         </div>
                     ))}
                 </div>
