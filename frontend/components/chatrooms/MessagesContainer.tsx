@@ -26,7 +26,7 @@ function MessagesContainer({ roomId }: MessagesContainerProps) {
 		return (
 			<div
 				ref={containerRef}
-				className="flex flex-col gap-2 h-[calc(100vh-300px)] overflow-y-auto items-center justify-center text-gray-500"
+				className="flex flex-col gap-2 flex-1 min-h-0 overflow-y-auto items-center justify-center text-muted-foreground p-2"
 			>
 				<p>No messages yet. Start the conversation!</p>
 			</div>
@@ -36,8 +36,9 @@ function MessagesContainer({ roomId }: MessagesContainerProps) {
 	return (
 		<div
 			ref={containerRef}
-			className="flex flex-col gap-2 h-[calc(100vh-300px)] overflow-y-auto p-2"
+			className="flex flex-col gap-2 flex-1 min-h-0 overflow-y-auto p-2"
 		>
+
 			{messages.map((message, index) => {
 				if (message.type === "system") {
 					return (

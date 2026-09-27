@@ -112,3 +112,54 @@ func TestDetermineOnlineMember(t *testing.T) {
 		t.Errorf("expected Username to be 'diana', got %q", m4.Username)
 	}
 }
+
+func TestValidateTypingPayload(t *testing.T) {
+	// Valid payload with isTyping true
+	p1 := map[string]interface{}{
+		"roomId":   "general",
+		"username": "alice",
+		"isTyping": true,
+	}
+	roomId, username, isTyping, valid := ValidateTypingPayload(p1)
+	if !valid || roomId != "general" || username != "alice" || !isTyping {
+		t.Errorf("expected valid payload (general, alice, true), got (%s, %s, %v, %v)", roomId, username, isTyping, valid)
+	}
+
+	// Valid payload with isTyping false
+	p2 := map[string]interface{}{
+		"roomId":   "general",
+		"username": "bob",
+		"isTyping": false,
+	}
+	roomId, username, isTyping, valid = ValidateTypingPayload(p2)
+	if !valid || roomId != "general" || username != "bob" || isTyping {
+		t.Errorf("expected valid payload (general, bob, false), got (%s, %s, %v, %v)", roomId, username, isTyping, valid)
+	}
+
+	// Invalid: missing roomId
+	p3 := map[string]interface{}{
+		"username": "charlie",
+		"isTyping": true,
+	}
+	_, _, _, valid = ValidateTypingPayload(p3)
+	if valid {
+		t.Errorf("expected invalid payload when roomId is missing")
+	}
+
+	// Invalid: missing username
+	p4 := map[string]interface{}{
+		"roomId":   "general",
+		"isTyping": true,
+	}
+	_, _, _, valid = ValidateTypingPayload(p4)
+	if valid {
+		t.Errorf("expected invalid payload when username is missing")
+	}
+
+	// Invalid: empty map
+	_, _, _, valid = ValidateTypingPayload(nil)
+	if valid {
+		t.Errorf("expected invalid payload when map is nil")
+	}
+}
+
