@@ -13,6 +13,7 @@ import { Loader2Icon, MessagesSquareIcon, MoveUpRightIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { getBrowser, getDeviceType, getOS } from "@/utils/functions/deviceDetails";
 import { signIn } from "next-auth/react";
+import Link from "next/link";
 
 interface LoginFormProps {
 	currentIPAddress: string;
@@ -29,7 +30,7 @@ const FormSchema = z.object({
 		},
 		{
 			message: "You must be at least 18 years old.",
-		}
+		},
 	),
 	gender: z.enum(["male", "female", "transgender", "couple", "other"], {
 		required_error: "Gender is required",
@@ -63,26 +64,29 @@ export default function LoginForm({ currentIPAddress }: LoginFormProps) {
 			};
 
 			const result = await signIn("credentials", {
+				flow: "guest",
 				username,
 				dob: dob.toISOString(),
 				gender,
+				ipAddress: currentIPAddress,
 				deviceDetails: JSON.stringify(deviceDetails),
 				redirect: false,
 			});
 
 			if (result?.error) {
-				toast("Registration Failed", { description: "Please try again" });
+				const description = result.code && result.code !== "credentials" ? result.code : "Registration failed. Please try again.";
+				toast.error("Registration Failed", { description });
 				return;
 			}
 
 			if (result?.ok) {
-				toast("Registration Successful", { description: "Welcome to Chatter Base!" });
+				toast.success("Registration Successful", { description: "Welcome to Chatter Base!" });
 				router.push("/available-chatrooms");
 				router.refresh();
 			}
 		} catch (error: any) {
-			console.log(error);
-			toast("Registration Failed", { description: "Please try again" });
+			console.error(error);
+			toast.error("Registration Failed", { description: error?.message || "Please try again" });
 		}
 	};
 
@@ -158,6 +162,10 @@ export default function LoginForm({ currentIPAddress }: LoginFormProps) {
 						</>
 					)}
 				</Button>
+
+				<div className="flex gap-1 ">
+					<p>You are logging in as guest, to get a permanent account </p> <Link className="underline" href={"/permanent-login"}>Click Here </Link>
+				</div>
 			</form>
 		</Form>
 	);

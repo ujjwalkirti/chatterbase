@@ -16,10 +16,11 @@ function Page() {
 
 	useEffect(() => {
 		if (roomId && isConnected && user?.username && !hasJoined) {
-			joinRoom(user.username, roomId);
+			const memberType = user.userStatus === "anonymous" ? "guest" : (user.userStatus || "guest");
+			joinRoom(user.username, roomId, memberType);
 			setHasJoined(true);
 		}
-	}, [roomId, isConnected, user?.username, hasJoined, joinRoom]);
+	}, [roomId, isConnected, user?.username, user?.userStatus, hasJoined, joinRoom]);
 
 	useEffect(() => {
 		const handleBeforeUnload = () => {

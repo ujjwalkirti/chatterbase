@@ -1,6 +1,8 @@
 "use client";
 import React, { useCallback, useContext, useEffect, useState, useRef } from "react";
 import { io, Socket } from "socket.io-client";
+import { signOut } from "next-auth/react";
+import { authContext } from "./AuthProvider";
 
 interface SocketProviderProps {
 	children?: React.ReactNode;
@@ -9,7 +11,7 @@ interface SocketProviderProps {
 interface ISocketContext {
 	sendMessage: (message: string, senderId: string, roomId: string) => void;
 	messages: Map<string, Message[]>;
-	joinRoom: (userId: string, roomId: string) => void;
+	joinRoom: (userId: string, roomId: string, type?: string) => void;
 	leaveRoom: (userId: string, roomId: string) => void;
 	isConnected: boolean;
 	currentRoomId: string | null;
@@ -28,12 +30,28 @@ export const useSocket = () => {
 };
 
 export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
+	const { user } = useContext(authContext);
 	const [socket, setSocket] = useState<Socket>();
 	const [messages, setMessages] = useState<Map<string, Message[]>>(new Map());
 	const [isConnected, setIsConnected] = useState(false);
 	const [currentRoomId, setCurrentRoomId] = useState<string | null>(null);
 	const [onlineMembers, setOnlineMembers] = useState<Map<string, OnlineMember[]>>(new Map());
 	const socketRef = useRef<Socket | null>(null);
+
+	// Emit periodic guest heartbeat over socket while connected
+	useEffect(() => {
+		if (!isConnected || !socketRef.current || !user?.username) return;
+
+		const hbInterval = setInterval(() => {
+			if (socketRef.current?.connected) {
+				socketRef.current.emit("guest-heartbeat", { username: user.username });
+			}
+		}, 30000);
+
+		return () => {
+			clearInterval(hbInterval);
+		};
+	}, [isConnected, user?.username]);
 
 	const sendMessage = useCallback(
 		(message: string, senderId: string, roomId: string) => {
@@ -66,9 +84,9 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
 	);
 
 	const joinRoom = useCallback(
-		(userId: string, roomId: string) => {
+		(userId: string, roomId: string, type: string = "user") => {
 			if (socketRef.current) {
-				socketRef.current.emit("join-room", { userId, roomId });
+				socketRef.current.emit("join-room", { userId, roomId, type });
 				setCurrentRoomId(roomId);
 			}
 		},
@@ -174,13 +192,17 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
 		_socket.on("online-members", ({ roomId, members }: { roomId: string; members: OnlineMember[] }) => {
 			setOnlineMembers((prev) => {
 				const newMap = new Map(prev);
+				console.log(members);
 				newMap.set(roomId, members);
 				return newMap;
 			});
 		});
 
-		_socket.on("error", (error: { message: string }) => {
+		_socket.on("error", async (error: { message: string }) => {
 			console.error("Socket error:", error.message);
+			if (error.message && error.message.toLowerCase().includes("expired")) {
+				await signOut({ callbackUrl: "/guest-login" });
+			}
 		});
 
 		_socket.connect();

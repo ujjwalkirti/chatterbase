@@ -1,4 +1,4 @@
-package controllers
+package chatroom
 
 import (
 	"context"
@@ -11,16 +11,16 @@ import (
 	"github.com/joho/godotenv"
 
 	"github.com/ujjwalkirti/chatterbase-backend-go/config"
-	"github.com/ujjwalkirti/chatterbase-backend-go/middlewares"
-	"github.com/ujjwalkirti/chatterbase-backend-go/models"
+	"github.com/ujjwalkirti/chatterbase-backend-go/middleware"
 )
 
-func RegisterChatRoutes(rg *gin.RouterGroup) {
+// RegisterRoutes mounts all chatroom-related endpoints on the router group.
+func RegisterRoutes(rg *gin.RouterGroup) {
 	chat := rg.Group("/chatroom")
 	chat.GET("/", getAll)
 	chat.POST("/create", create)
-	chat.POST("/enter", middlewares.JWTAuthMiddleware(), enter)
-	chat.GET("/:roomId/messages", middlewares.JWTAuthMiddleware(), getMessages)
+	chat.POST("/enter", middleware.JWTAuthMiddleware(), enter)
+	chat.GET("/:roomId/messages", middleware.JWTAuthMiddleware(), getMessages)
 }
 
 func getAll(c *gin.Context) {
@@ -33,9 +33,9 @@ func getAll(c *gin.Context) {
 		return
 	}
 	defer rows.Close()
-	var rooms []models.Chatroom
+	var rooms []Chatroom
 	for rows.Next() {
-		var r models.Chatroom
+		var r Chatroom
 		var participants []string
 		if err := rows.Scan(&r.ID, &r.Name, &r.Description, &r.ParticipantCount, &participants); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"success": false, "message": "Internal Server Error"})
@@ -49,7 +49,7 @@ func getAll(c *gin.Context) {
 
 func create(c *gin.Context) {
 	var body struct {
-		ChatRoomDetails models.Chatroom `json:"chatRoomDetails"`
+		ChatRoomDetails Chatroom `json:"chatRoomDetails"`
 	}
 	if err := c.BindJSON(&body); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"success": false, "message": "Invalid body"})
@@ -65,7 +65,7 @@ func create(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "message": "Internal Server Error"})
 		return
 	}
-	obj := models.Chatroom{ID: id, Name: body.ChatRoomDetails.Name, Description: body.ChatRoomDetails.Description, ParticipantCount: 0, Participants: []string{}}
+	obj := Chatroom{ID: id, Name: body.ChatRoomDetails.Name, Description: body.ChatRoomDetails.Description, ParticipantCount: 0, Participants: []string{}}
 	c.JSON(http.StatusOK, gin.H{"success": true, "message": "Chat room created successfully", "data": obj})
 }
 
@@ -87,7 +87,7 @@ func enter(c *gin.Context) {
 	}
 	// get current room
 	row := config.Pool.QueryRow(ctx, "SELECT id, name, description, participant_count, participants FROM chatrooms WHERE id=$1", id)
-	var room models.Chatroom
+	var room Chatroom
 	var participants []string
 	if err := row.Scan(&room.ID, &room.Name, &room.Description, &room.ParticipantCount, &participants); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"success": false, "message": "Chat room not found"})
@@ -121,7 +121,6 @@ func enter(c *gin.Context) {
 	} else {
 		c.JSON(http.StatusOK, gin.H{"success": true, "message": "Already joined the chat room successfully.", "data": room})
 	}
-
 }
 
 func getMessages(c *gin.Context) {
@@ -148,14 +147,14 @@ func getMessages(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	messages, err := models.GetMessagesByRoom(ctx, roomId, limit, offset)
+	messages, err := GetMessagesByRoom(ctx, roomId, limit, offset)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "message": "Failed to fetch messages", "error": err.Error()})
 		return
 	}
 
 	if messages == nil {
-		messages = []models.Message{}
+		messages = []Message{}
 	}
 
 	c.JSON(http.StatusOK, gin.H{

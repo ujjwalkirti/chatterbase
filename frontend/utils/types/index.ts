@@ -24,6 +24,7 @@ interface OnlineMember {
     userId: string;
     username: string;
     roomId: string;
+    type?: string;
 }
 
 interface User {
