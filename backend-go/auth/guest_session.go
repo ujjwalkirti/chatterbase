@@ -69,11 +69,13 @@ func ReleaseGuestUsername(ctx context.Context, username string, userId int64) er
 			if err != nil {
 				return err
 			}
+			_, _ = config.Pool.Exec(ctx, "UPDATE tokens SET expired = true, updated_at = CURRENT_TIMESTAMP WHERE username = $1 AND expired = false", username)
 		} else if username != "" {
 			_, err := config.Pool.Exec(ctx, "UPDATE users SET user_status = $1, updated_at = CURRENT_TIMESTAMP WHERE username = $2 AND user_status = $3", UserStatusArchived, username, UserStatusAnonymous)
 			if err != nil {
 				return err
 			}
+			_, _ = config.Pool.Exec(ctx, "UPDATE tokens SET expired = true, updated_at = CURRENT_TIMESTAMP WHERE username = $1 AND expired = false", username)
 		}
 	}
 

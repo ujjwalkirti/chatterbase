@@ -473,6 +473,29 @@ func verify(c *gin.Context) {
 		return
 	}
 
+	// For anonymous guest sessions, strictly verify that Redis lock is active and user is not archived
+	if userStatus, ok := claims["user_status"].(string); ok && userStatus == UserStatusAnonymous {
+		username, _ := claims["username"].(string)
+		active, err := IsGuestActive(ctx, username)
+		if err != nil || !active {
+			// Guest is no longer active in Redis, expire token and archive
+			_, _ = config.Pool.Exec(ctx, "UPDATE tokens SET expired=true WHERE id=$1", t.ID)
+			_ = ReleaseGuestUsername(ctx, username, 0)
+			c.JSON(http.StatusUnauthorized, gin.H{"success": false, "message": "Guest session has expired"})
+			return
+		}
+
+		// Also check user record in DB
+		var dbStatus string
+		err = config.Pool.QueryRow(ctx, "SELECT user_status FROM users WHERE username=$1 ORDER BY id DESC LIMIT 1", username).Scan(&dbStatus)
+		if err != nil || dbStatus != UserStatusAnonymous {
+			_, _ = config.Pool.Exec(ctx, "UPDATE tokens SET expired=true WHERE id=$1", t.ID)
+			_ = ReleaseGuestUsername(ctx, username, 0)
+			c.JSON(http.StatusUnauthorized, gin.H{"success": false, "message": "Guest session has expired"})
+			return
+		}
+	}
+
 	c.JSON(http.StatusOK, gin.H{"success": true, "message": "Token is valid", "data": claims})
 }
 

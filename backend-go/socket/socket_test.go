@@ -75,3 +75,40 @@ func TestSocketGuestTrackingAndRelease(t *testing.T) {
 		t.Fatalf("expected guest to NOT be active after release")
 	}
 }
+
+func TestDetermineOnlineMember(t *testing.T) {
+	ctx := context.Background()
+
+	// 1. Explicit guest type should have Type="guest" and Username="guest-alice"
+	m1 := DetermineOnlineMember(ctx, "user1", "alice", "room1", "guest")
+	if m1.Type != "guest" {
+		t.Errorf("expected Type to be 'guest', got %q", m1.Type)
+	}
+	if m1.Username != "guest-alice" {
+		t.Errorf("expected Username to be 'guest-alice', got %q", m1.Username)
+	}
+
+	// 2. Anonymous type should also be resolved to "guest" with "guest-" prefix
+	m2 := DetermineOnlineMember(ctx, "user2", "bob", "room1", "anonymous")
+	if m2.Type != "guest" {
+		t.Errorf("expected Type to be 'guest', got %q", m2.Type)
+	}
+	if m2.Username != "guest-bob" {
+		t.Errorf("expected Username to be 'guest-bob', got %q", m2.Username)
+	}
+
+	// 3. Username already starting with "guest-" should not get duplicated prefix
+	m3 := DetermineOnlineMember(ctx, "user3", "guest-charlie", "room1", "guest")
+	if m3.Username != "guest-charlie" {
+		t.Errorf("expected Username to be 'guest-charlie', got %q", m3.Username)
+	}
+
+	// 4. Permanent type should have Type="permanent" and unmodified Username
+	m4 := DetermineOnlineMember(ctx, "user4", "diana", "room1", "permanent")
+	if m4.Type != "permanent" {
+		t.Errorf("expected Type to be 'permanent', got %q", m4.Type)
+	}
+	if m4.Username != "diana" {
+		t.Errorf("expected Username to be 'diana', got %q", m4.Username)
+	}
+}

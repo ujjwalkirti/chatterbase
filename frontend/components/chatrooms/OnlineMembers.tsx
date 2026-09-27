@@ -25,29 +25,35 @@ function OnlineMembers({ roomId }: OnlineMembersProps) {
                 <p className="text-sm text-gray-500">No members online</p>
             ) : (
                 <div className="flex flex-col gap-2">
-                    {onlineMembers.map((member) => (
-                        <div
-                            key={member.userId}
-                            className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                        >
-                            <div className="flex items-center gap-2">
-                                <Avatar className="w-8 h-8">
-                                    <AvatarFallback className="text-xs">
-                                        {member.username.slice(0, 2).toUpperCase()}
-                                    </AvatarFallback>
-                                </Avatar>
+                    {onlineMembers.map((member) => {
+                        const isGuest =
+                            member.type === "guest" ||
+                            member.type === "anonymous" ||
+                            member.username.toLowerCase().startsWith("guest-");
+                        const displayName =
+                            isGuest && !member.username.toLowerCase().startsWith("guest-")
+                                ? `guest-${member.username}`
+                                : member.username;
+
+                        return (
+                            <div
+                                key={member.userId || member.username}
+                                className="flex items-center p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                            >
                                 <div className="flex items-center gap-2">
-                                    <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                                    <span className="text-sm font-medium">{member.username}</span>
+                                    <Avatar className="w-8 h-8">
+                                        <AvatarFallback className="text-xs">
+                                            {displayName.slice(0, 2).toUpperCase()}
+                                        </AvatarFallback>
+                                    </Avatar>
+                                    <div className="flex items-center gap-2">
+                                        <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                                        <span className="text-sm font-medium">{displayName}</span>
+                                    </div>
                                 </div>
                             </div>
-                            {member.type && (
-                                <span className="text-xs text-gray-500 bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded capitalize">
-                                    {member.type}
-                                </span>
-                            )}
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             )}
         </div>

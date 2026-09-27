@@ -424,4 +424,50 @@ func TestRegister_BlocksActiveGuest(t *testing.T) {
 	}
 }
 
+func TestVerify_ExpiredGuestSession(t *testing.T) {
+	router := setupTestRouter()
+	username := fmt.Sprintf("verify_guest_%d", time.Now().UnixNano())
+
+	// 1. Create a guest session
+	loginPayload := map[string]interface{}{
+		"username": username,
+		"dob":      "2000-01-01",
+		"gender":   "male",
+	}
+	b, _ := json.Marshal(loginPayload)
+	req, _ := http.NewRequest(http.MethodPost, "/api/auth/guest-login", bytes.NewBuffer(b))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK from guest login, got %d", w.Code)
+	}
+
+	var resp struct {
+		Data struct {
+			Token string `json:"token"`
+		} `json:"data"`
+	}
+	_ = json.Unmarshal(w.Body.Bytes(), &resp)
+	tokenStr := resp.Data.Token
+
+	// 2. Simulate browser close / guest release (delete Redis key)
+	_ = ReleaseGuestUsername(context.Background(), username, 0)
+
+	// 3. Call verify with the guest token
+	verifyPayload := map[string]interface{}{
+		"token": tokenStr,
+	}
+	vb, _ := json.Marshal(verifyPayload)
+	vreq, _ := http.NewRequest(http.MethodPost, "/api/auth/verify", bytes.NewBuffer(vb))
+	vreq.Header.Set("Content-Type", "application/json")
+	vw := httptest.NewRecorder()
+	router.ServeHTTP(vw, vreq)
+
+	if vw.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401 Unauthorized for released guest session, got %d: %s", vw.Code, vw.Body.String())
+	}
+}
+
 

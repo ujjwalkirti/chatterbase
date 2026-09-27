@@ -1,6 +1,7 @@
 "use client";
 import React, { useCallback, useContext, useEffect, useState, useRef } from "react";
 import { io, Socket } from "socket.io-client";
+import { signOut } from "next-auth/react";
 import { authContext } from "./AuthProvider";
 
 interface SocketProviderProps {
@@ -197,8 +198,11 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
 			});
 		});
 
-		_socket.on("error", (error: { message: string }) => {
+		_socket.on("error", async (error: { message: string }) => {
 			console.error("Socket error:", error.message);
+			if (error.message && error.message.toLowerCase().includes("expired")) {
+				await signOut({ callbackUrl: "/guest-login" });
+			}
 		});
 
 		_socket.connect();

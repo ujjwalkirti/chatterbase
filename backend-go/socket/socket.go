@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strings"
 	"sync"
 
 	"github.com/redis/go-redis/v9"
@@ -109,13 +110,14 @@ func New() *SocketServer {
 				return
 			}
 
-			var roomId, userId string
+			var roomId, userId, userType string
 
 			// Handle both object and string formats
 			switch v := args[0].(type) {
 			case map[string]interface{}:
 				roomId, _ = v["roomId"].(string)
 				userId, _ = v["userId"].(string)
+				userType, _ = v["type"].(string)
 			case string:
 				roomId = v
 				userId = socketId
@@ -135,6 +137,16 @@ func New() *SocketServer {
 
 				// If userId is provided, treat it as username and add to members
 				if userId != "" {
+					if userType == "guest" || userType == "anonymous" {
+						active, _ := auth.IsGuestActive(context.Background(), userId)
+						if !active {
+							client.Emit("error", map[string]interface{}{
+								"message": "Guest session has expired. Please sign in again.",
+							})
+							return
+						}
+					}
+
 					ss.memberMu.Lock()
 					ss.socketUsers[socketId] = userId
 					ss.memberMu.Unlock()
@@ -147,11 +159,7 @@ func New() *SocketServer {
 						_, _ = auth.RenewGuestHeartbeat(context.Background(), userId, auth.DefaultGuestSessionTTL)
 					}
 
-					member := OnlineMember{
-						UserId:   userId,
-						Username: userId,
-						RoomId:   roomId,
-					}
+					member := DetermineOnlineMember(context.Background(), userId, userId, roomId, userType)
 					ss.addMember(roomId, socketId, member)
 				}
 			}
@@ -179,6 +187,16 @@ func New() *SocketServer {
 			}
 
 			if roomId != "" && username != "" {
+				if typeOfUser == "guest" || typeOfUser == "anonymous" {
+					active, _ := auth.IsGuestActive(context.Background(), username)
+					if !active {
+						client.Emit("error", map[string]interface{}{
+							"message": "Guest session has expired. Please sign in again.",
+						})
+						return
+					}
+				}
+
 				// Track user mapping
 				ss.memberMu.Lock()
 				ss.socketUsers[socketId] = username
@@ -205,18 +223,14 @@ func New() *SocketServer {
 
 				client.Join(socket.Room(roomId))
 
-				member := OnlineMember{
-					UserId:   userId,
-					Username: username,
-					RoomId:   roomId,
-					Type:     typeOfUser,
-				}
+				member := DetermineOnlineMember(context.Background(), userId, username, roomId, typeOfUser)
 				ss.addMember(roomId, socketId, member)
 
 				// Broadcast user-joined to the room
 				client.To(socket.Room(roomId)).Emit("user-joined", map[string]interface{}{
-					"username": username,
+					"username": member.Username,
 					"roomId":   roomId,
+					"type":     member.Type,
 				})
 			}
 		})
@@ -336,6 +350,40 @@ func New() *SocketServer {
 	go ss.listenPubSub()
 
 	return ss
+}
+
+// DetermineOnlineMember resolves user type and formats guest usernames to start with "guest-"
+func DetermineOnlineMember(ctx context.Context, userId, username, roomId, typeOfUser string) OnlineMember {
+	if username == "" {
+		username = userId
+	}
+
+	memberType := "guest"
+	if typeOfUser == "permanent" {
+		memberType = "permanent"
+	} else if typeOfUser == "guest" || typeOfUser == "anonymous" {
+		memberType = "guest"
+	} else if active, _ := auth.IsGuestActive(ctx, username); active {
+		memberType = "guest"
+	} else if config.Pool != nil {
+		var status string
+		err := config.Pool.QueryRow(ctx, "SELECT user_status FROM users WHERE username = $1 AND user_status = 'permanent'", username).Scan(&status)
+		if err == nil && status == auth.UserStatusPermanent {
+			memberType = "permanent"
+		}
+	}
+
+	displayUsername := username
+	if memberType == "guest" && !strings.HasPrefix(strings.ToLower(username), "guest-") {
+		displayUsername = "guest-" + username
+	}
+
+	return OnlineMember{
+		UserId:   userId,
+		Username: displayUsername,
+		RoomId:   roomId,
+		Type:     memberType,
+	}
 }
 
 func (s *SocketServer) addMember(roomId, socketId string, member OnlineMember) {
