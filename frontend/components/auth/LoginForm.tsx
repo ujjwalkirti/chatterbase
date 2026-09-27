@@ -64,9 +64,11 @@ export default function LoginForm({ currentIPAddress }: LoginFormProps) {
 			};
 
 			const result = await signIn("credentials", {
+				flow: "guest",
 				username,
 				dob: dob.toISOString(),
 				gender,
+				ipAddress: currentIPAddress,
 				deviceDetails: JSON.stringify(deviceDetails),
 				redirect: false,
 			});

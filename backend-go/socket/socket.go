@@ -172,6 +172,7 @@ func New() *SocketServer {
 			roomId, _ := data["roomId"].(string)
 			userId, _ := data["userId"].(string)
 			username, _ := data["username"].(string)
+			typeOfUser, _ := data["type"].(string)
 
 			if username == "" {
 				username = userId
@@ -208,6 +209,7 @@ func New() *SocketServer {
 					UserId:   userId,
 					Username: username,
 					RoomId:   roomId,
+					Type:     typeOfUser,
 				}
 				ss.addMember(roomId, socketId, member)
 

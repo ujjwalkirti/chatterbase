@@ -8,6 +8,8 @@ declare module "next-auth" {
       accessToken: string
       dob: string
       gender: string
+      userStatus?: string
+      email?: string
     } & DefaultSession["user"]
   }
 
@@ -16,6 +18,8 @@ declare module "next-auth" {
     token?: string
     dob?: string
     gender?: string
+    userStatus?: string
+    email?: string
   }
 }
 
@@ -25,5 +29,7 @@ declare module "next-auth/jwt" {
     accessToken?: string
     dob?: string
     gender?: string
+    userStatus?: string
+    email?: string
   }
 }

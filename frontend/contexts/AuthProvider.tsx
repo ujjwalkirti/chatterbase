@@ -1,6 +1,6 @@
 'use client';
 import { SessionProvider, useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import React, { useEffect } from "react";
 
 type User = {
@@ -9,6 +9,8 @@ type User = {
 	dob?: string;
 	gender?: string;
 	accessToken?: string;
+	userStatus?: string;
+	email?: string | null;
 }
 
 type authContextType = {
@@ -24,13 +26,17 @@ const authContext = React.createContext<authContextType>({
 function AuthContextProvider({ children }: { children: React.ReactNode }) {
 	const { data: session, status } = useSession();
 	const router = useRouter();
+	const pathname = usePathname();
 	const isLoading = status === "loading";
 
 	useEffect(() => {
 		if (status === "unauthenticated") {
-			router.push('/login');
+			const isAuthPage = pathname === "/login" || pathname === "/guest-login" || pathname === "/permanent-login";
+			if (!isAuthPage) {
+				router.push('/guest-login');
+			}
 		}
-	}, [status, router]);
+	}, [status, pathname, router]);
 
 	const user: User | null = session?.user ? {
 		id: session.user.id,
@@ -38,6 +44,8 @@ function AuthContextProvider({ children }: { children: React.ReactNode }) {
 		dob: session.user.dob,
 		gender: session.user.gender,
 		accessToken: session.user.accessToken,
+		userStatus: session.user.userStatus,
+		email: session.user.email,
 	} : null;
 
 	useEffect(() => {
@@ -61,8 +69,10 @@ function AuthContextProvider({ children }: { children: React.ReactNode }) {
 			}
 		}, 30000);
 
-		// 2. Beacon on tab/browser close to release guest lock immediately
+		// 2. Beacon on tab/browser close to release guest lock immediately (guests only)
+		const isGuest = user.userStatus === "anonymous";
 		const handleBeforeUnload = () => {
+			if (!isGuest) return;
 			const payload = JSON.stringify({ token: user.accessToken });
 			if (navigator.sendBeacon) {
 				const blob = new Blob([payload], { type: "application/json" });
@@ -77,13 +87,17 @@ function AuthContextProvider({ children }: { children: React.ReactNode }) {
 			}
 		};
 
-		window.addEventListener("beforeunload", handleBeforeUnload);
+		if (isGuest) {
+			window.addEventListener("beforeunload", handleBeforeUnload);
+		}
 
 		return () => {
 			clearInterval(interval);
-			window.removeEventListener("beforeunload", handleBeforeUnload);
+			if (isGuest) {
+				window.removeEventListener("beforeunload", handleBeforeUnload);
+			}
 		};
-	}, [user?.username, user?.accessToken]);
+	}, [user?.username, user?.accessToken, user?.userStatus]);
 
 	return (
 		<authContext.Provider value={{ user, isLoading }}>

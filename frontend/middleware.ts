@@ -3,21 +3,24 @@ import { NextResponse } from "next/server"
 
 export default auth((req) => {
   const isLoggedIn = !!req.auth
-  const isOnLoginPage = req.nextUrl.pathname.startsWith("/login")
+  const isOnAuthPage =
+    req.nextUrl.pathname.startsWith("/login") ||
+    req.nextUrl.pathname.startsWith("/guest-login") ||
+    req.nextUrl.pathname.startsWith("/permanent-login")
   const isOnProtectedRoute =
     req.nextUrl.pathname.startsWith("/available-chatrooms") ||
     req.nextUrl.pathname.startsWith("/chatrooms") ||
     req.nextUrl.pathname.startsWith("/chat") ||
     req.nextUrl.pathname.startsWith("/profile")
 
-  // Redirect logged-in users away from login page
-  if (isLoggedIn && isOnLoginPage) {
+  // Redirect logged-in users away from auth pages
+  if (isLoggedIn && isOnAuthPage) {
     return NextResponse.redirect(new URL("/available-chatrooms", req.nextUrl))
   }
 
-  // Redirect non-logged-in users to login page
+  // Redirect non-logged-in users to guest-login page
   if (!isLoggedIn && isOnProtectedRoute) {
-    return NextResponse.redirect(new URL("/login", req.nextUrl))
+    return NextResponse.redirect(new URL("/guest-login", req.nextUrl))
   }
 
   return NextResponse.next()
