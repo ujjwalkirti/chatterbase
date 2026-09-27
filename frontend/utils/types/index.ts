@@ -36,3 +36,10 @@ interface User {
     createdAt: string;
     updatedAt: string;
 }
+
+interface TypingPayload {
+    roomId: string;
+    username: string;
+    isTyping: boolean;
+}
+

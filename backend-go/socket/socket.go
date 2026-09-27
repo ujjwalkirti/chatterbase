@@ -292,12 +292,17 @@ func New() *SocketServer {
 				return
 			}
 			if data, ok := args[0].(map[string]interface{}); ok {
-				roomId, _ := data["roomId"].(string)
-				if roomId != "" {
-					client.To(socket.Room(roomId)).Emit("typing", data)
+				roomId, username, isTyping, valid := ValidateTypingPayload(data)
+				if valid {
+					client.To(socket.Room(roomId)).Emit("typing", map[string]interface{}{
+						"roomId":   roomId,
+						"username": username,
+						"isTyping": isTyping,
+					})
 				}
 			}
 		})
+
 
 		// Handle guest heartbeat event
 		client.On("guest-heartbeat", func(args ...any) {
@@ -385,6 +390,27 @@ func DetermineOnlineMember(ctx context.Context, userId, username, roomId, typeOf
 		Type:     memberType,
 	}
 }
+
+// ValidateTypingPayload extracts and validates fields from a typing indicator payload
+func ValidateTypingPayload(data map[string]interface{}) (roomId string, username string, isTyping bool, valid bool) {
+	if data == nil {
+		return "", "", false, false
+	}
+	roomId, _ = data["roomId"].(string)
+	username, _ = data["username"].(string)
+	if roomId == "" || username == "" {
+		return "", "", false, false
+	}
+
+	if val, ok := data["isTyping"].(bool); ok {
+		isTyping = val
+	} else {
+		isTyping = true
+	}
+
+	return roomId, username, isTyping, true
+}
+
 
 func (s *SocketServer) addMember(roomId, socketId string, member OnlineMember) {
 	s.memberMu.Lock()
