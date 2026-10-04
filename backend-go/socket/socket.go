@@ -337,16 +337,9 @@ func New() *SocketServer {
 		client.On("disconnect", func(args ...any) {
 			log.Println("Socket.IO client disconnected:", socketId)
 
-			// Release guest session if socket was a guest
 			ss.guestMu.Lock()
-			guestUsername, isGuest := ss.socketGuests[socketId]
 			delete(ss.socketGuests, socketId)
 			ss.guestMu.Unlock()
-
-			if isGuest && guestUsername != "" {
-				log.Printf("Releasing guest username on disconnect: %s", guestUsername)
-				_ = auth.ReleaseGuestUsername(context.Background(), guestUsername, 0)
-			}
 
 			ss.memberMu.Lock()
 			rooms := ss.socketRooms[socketId]

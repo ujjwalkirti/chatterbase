@@ -337,7 +337,8 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
 		_socket.on("error", async (error: { message: string }) => {
 			console.error("Socket error:", error.message);
 			if (error.message && error.message.toLowerCase().includes("expired")) {
-				await signOut({ callbackUrl: "/guest-login" });
+				await signOut({ redirect: false });
+				window.location.href = "/guest-login?expired=true";
 			}
 		});
 

@@ -11,7 +11,20 @@ function Navbar() {
 	const { data: session } = useSession();
 
 	const handleLogout = async () => {
-		await signOut({ callbackUrl: "/guest-login" });
+		try {
+			if (session?.user?.accessToken) {
+				const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+				await fetch(`${apiUrl}/api/auth/logout`, {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ token: session.user.accessToken }),
+				});
+			}
+		} catch (err) {
+			console.error("Logout notification error:", err);
+		}
+		await signOut({ redirect: false });
+		window.location.href = "/guest-login";
 	};
 
 	return (
