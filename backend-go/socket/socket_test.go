@@ -163,3 +163,60 @@ func TestValidateTypingPayload(t *testing.T) {
 	}
 }
 
+func TestRemoveMember_IdempotentAndCleanup(t *testing.T) {
+	ss := New()
+	defer ss.Close()
+
+	roomId := "test-room"
+	socketId := "mock-socket-456"
+	member := OnlineMember{
+		UserId:   "user-1",
+		Username: "guest-testuser",
+		RoomId:   roomId,
+		Type:     "guest",
+	}
+
+	// 1. Setup member and socketRooms
+	ss.addMember(roomId, socketId, member)
+	ss.memberMu.Lock()
+	ss.socketRooms[socketId] = []string{roomId}
+	ss.memberMu.Unlock()
+
+	// 2. First removeMember call should succeed
+	username, removed := ss.removeMember(roomId, socketId, nil)
+	if !removed {
+		t.Fatalf("expected first removeMember to return removed=true")
+	}
+	if username != "guest-testuser" {
+		t.Fatalf("expected username to be 'guest-testuser', got %q", username)
+	}
+
+	// Verify socketRooms cleaned up
+	ss.memberMu.RLock()
+	rooms := ss.socketRooms[socketId]
+	ss.memberMu.RUnlock()
+	for _, r := range rooms {
+		if r == roomId {
+			t.Errorf("expected %s to be removed from socketRooms, but still present", roomId)
+		}
+	}
+
+	// 3. Second removeMember call (e.g. disconnect after leave-room) must be a no-op
+	username2, removed2 := ss.removeMember(roomId, socketId, nil)
+	if removed2 {
+		t.Errorf("expected second removeMember to return removed=false, got removed=true")
+	}
+	if username2 != "" {
+		t.Errorf("expected second removeMember to return empty username, got %q", username2)
+	}
+
+	// 4. Non-existent socket call must be a no-op
+	username3, removed3 := ss.removeMember(roomId, "unknown-socket", nil)
+	if removed3 {
+		t.Errorf("expected non-existent socket removeMember to return removed=false")
+	}
+	if username3 != "" {
+		t.Errorf("expected non-existent socket removeMember to return empty username, got %q", username3)
+	}
+}
+

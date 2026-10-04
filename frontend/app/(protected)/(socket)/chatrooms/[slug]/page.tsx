@@ -29,7 +29,6 @@ function Page() {
 	const roomId = slug as string;
 	const { user } = useContext(authContext);
 	const { joinRoom, isConnected, leaveRoom, getOnlineMembersForRoom } = useSocket();
-	const [hasJoined, setHasJoined] = useState(false);
 	const [isMobile, setIsMobile] = useState(false);
 	const [isMobileSheetOpen, setIsMobileSheetOpen] = useState(false);
 	const [isCollapsed, setIsCollapsed] = useState(false);
@@ -47,33 +46,27 @@ function Page() {
 		return () => window.removeEventListener("resize", checkMobile);
 	}, []);
 
+	// Handle joining and leaving the room
 	useEffect(() => {
-		if (roomId && isConnected && user?.username && !hasJoined) {
-			const memberType =
-				user.userStatus === "anonymous"
-					? "guest"
-					: user.userStatus || "guest";
-			joinRoom(user.username, roomId, memberType);
-			setHasJoined(true);
-		}
-	}, [roomId, isConnected, user?.username, user?.userStatus, hasJoined, joinRoom]);
+		if (!roomId || !isConnected || !user?.username) return;
 
-	useEffect(() => {
+		const memberType =
+			user.userStatus === "anonymous"
+				? "guest"
+				: user.userStatus || "guest";
+		joinRoom(user.username, roomId, memberType);
+
 		const handleBeforeUnload = () => {
-			if (isConnected && roomId && user?.username) {
-				leaveRoom(user.username, roomId);
-			}
+			leaveRoom(user.username, roomId);
 		};
 
 		window.addEventListener("beforeunload", handleBeforeUnload);
 
 		return () => {
 			window.removeEventListener("beforeunload", handleBeforeUnload);
-			if (isConnected && roomId && user?.username && hasJoined) {
-				leaveRoom(user.username, roomId);
-			}
+			leaveRoom(user.username, roomId);
 		};
-	}, [roomId, isConnected, user?.username, hasJoined, leaveRoom]);
+	}, [roomId, isConnected, user?.username, user?.userStatus, joinRoom, leaveRoom]);
 
 	const toggleMembers = () => {
 		if (isMobile) {
