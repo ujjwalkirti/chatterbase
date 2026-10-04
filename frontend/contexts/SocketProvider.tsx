@@ -180,9 +180,7 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
 			if (socketRef.current) {
 				sendTyping(roomId, false);
 				socketRef.current.emit("leave-room", { userId, roomId });
-				if (currentRoomId === roomId) {
-					setCurrentRoomId(null);
-				}
+				setCurrentRoomId((prev) => (prev === roomId ? null : prev));
 			}
 
 			// Clear typing timeouts for the left room
@@ -198,7 +196,7 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
 				return newMap;
 			});
 		},
-		[currentRoomId, sendTyping]
+		[sendTyping]
 	);
 
 	const getMessagesForRoom = useCallback((roomId: string): Message[] => {
@@ -284,6 +282,9 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
 		});
 
 		_socket.on("user-joined", ({ username, roomId }: { username: string; roomId: string }) => {
+			if (!username || !username.trim() || !roomId) {
+				return;
+			}
 			console.log(`User ${username} joined room ${roomId}`);
 			// Add system message for user joining
 			setMessages((prev) => {
@@ -302,10 +303,11 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
 		});
 
 		_socket.on("user-left", ({ username, roomId }: { username: string; roomId: string }) => {
-			console.log(`User ${username} left room ${roomId}`);
-			if (roomId && username) {
-				removeTypingUser(roomId, username);
+			if (!username || !username.trim() || !roomId) {
+				return;
 			}
+			console.log(`User ${username} left room ${roomId}`);
+			removeTypingUser(roomId, username);
 
 			// Add system message for user leaving
 			setMessages((prev) => {

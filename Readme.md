@@ -1,33 +1,39 @@
 # Chatter Base
 
-Chatter Base is a modern, real-time chat platform that enables users to join, create, and interact in chatrooms with secure authentication and device tracking. Built with **Next.js**, **React**, **Socket.io**, and **Express**, it features a responsive UI, real-time messaging, and robust backend services.
+Chatter Base is a modern, high-concurrency, real-time messaging and chatroom platform. Built with **Next.js 15** (React 19, Tailwind CSS v4) on the frontend and **Go** (Gin, Socket.IO v2, Redis Pub/Sub, PostgreSQL) on the backend, it features a hybrid dual-authentication architecture (ephemeral guest accounts + permanent accounts), Discord-style real-time typing indicators, resizable panels, and robust session presence tracking.
+
+---
+
+## 📝 Completed Tasks & Changelog
+
+For a detailed, chronological breakdown of all features, architecture migrations, and commit history from the beginning of the repository to the present, see **[completedtasks.md](completedtasks.md)**.
 
 ---
 
 ## 🚀 Features
 
-- **User Authentication**: Secure JWT-based login and registration.
-- **Real-Time Messaging**: Instant chat powered by Socket.io.
-- **Chatroom Management**: Create, join, and interact in multiple chatrooms.
-- **Device Details Capture**: Collects device/browser info during registration.
-- **Protected Routes**: Authenticated access to chatrooms and user features.
-- **Responsive UI**: Built with Tailwind CSS and Radix UI for accessibility.
-- **Toast Notifications**: Feedback via Sonner toasts.
-- **Form Validation**: Robust forms using React Hook Form and Zod.
-- **Modern Icons**: Lucide React for crisp, scalable icons.
+- **Hybrid Dual-Authentication**: Zero-friction guest logins with atomic Redis locks & username recycling, alongside permanent bcrypt-hashed accounts.
+- **Real-Time Messaging**: High-performance instant messaging powered by Go Socket.IO and Redis Pub/Sub backplane.
+- **Typing Indicators**: Discord-style typing indicator with bouncing dots and dynamic pluralization ("Alice is typing...", "Alice and Bob are typing...").
+- **Resizable Online Members Pane**: Draggable, collapsible panel with desktop/tablet resizing and mobile sheet support.
+- **Chatroom Management**: Create, join, and interact across multiple chatrooms.
+- **Device Details Capture**: Collects browser/device fingerprinting for security auditing.
+- **Protected Routes & Presence**: Heartbeat-based presence lifecycle with automatic session cleanup on tab/browser closure.
+- **Responsive UI**: Built with Tailwind CSS v4, Lucide React, and Radix UI primitives.
+- **Automated Dev Tooling**: Live reload with Air, Delve headless debugging, and one-click dev startup scripts (`start-dev.ps1`, `start-dev.sh`).
 
 ---
 
 ## 🏗️ Tech Stack
 
-- **Frontend**: Next.js (App Router), React 19.x, TypeScript
-- **Styling**: Tailwind CSS, Radix UI, tw-animate-css
-- **Real-Time**: Socket.io-client
-- **Forms**: React Hook Form, Zod
-- **Notifications**: Sonner
-- **Icons**: Lucide React
-- **Backend**: Express, TypeScript, Mongoose (MongoDB), Socket.io, Redis (ioredis)
-- **Languages**: TypeScript (frontend & backend), CSS
+- **Frontend**: Next.js 15 (App Router), React 19, TypeScript
+- **Styling & UI**: Tailwind CSS v4, Radix UI primitives, `react-resizable-panels`, Lucide React
+- **Auth Layer**: NextAuth.js v5 (beta) + React Context (`AuthProvider`) with 30s heartbeat & `beforeunload` beacon
+- **Real-Time Client**: `socket.io-client` (v4)
+- **Backend**: Go 1.23+, Gin HTTP framework, Socket.IO v2 (`zishang520/socket.io/v2`)
+- **Database**: PostgreSQL 16+ via connection pool `pgxpool` with automated startup migrations
+- **Cache & Pub/Sub**: Redis 7+ (`go-redis/v9`) for atomic guest session locking and cross-instance Pub/Sub
+- **Tooling**: Air (live reload), Delve (debugging), Docker & Docker Compose
 
 ---
 

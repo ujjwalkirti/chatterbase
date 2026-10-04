@@ -130,9 +130,18 @@ func New() *SocketServer {
 				client.Join(socket.Room(roomId))
 				log.Printf("Client %s joined room %s", client.Id(), roomId)
 
-				// Track socket room
+				// Track socket room (prevent duplicates)
 				ss.memberMu.Lock()
-				ss.socketRooms[socketId] = append(ss.socketRooms[socketId], roomId)
+				foundRoom := false
+				for _, r := range ss.socketRooms[socketId] {
+					if r == roomId {
+						foundRoom = true
+						break
+					}
+				}
+				if !foundRoom {
+					ss.socketRooms[socketId] = append(ss.socketRooms[socketId], roomId)
+				}
 				ss.memberMu.Unlock()
 
 				// If userId is provided, treat it as username and add to members
@@ -345,9 +354,13 @@ func New() *SocketServer {
 			delete(ss.socketRooms, socketId)
 			ss.memberMu.Unlock()
 
-			// Remove user from all rooms they were in
+			// Remove user from all rooms they were in (deduplicating seen rooms)
+			seenRooms := make(map[string]bool)
 			for _, roomId := range rooms {
-				ss.removeMember(roomId, socketId, io)
+				if roomId != "" && !seenRooms[roomId] {
+					seenRooms[roomId] = true
+					ss.removeMember(roomId, socketId, io)
+				}
 			}
 		})
 	})
@@ -435,14 +448,40 @@ func (s *SocketServer) addMember(roomId, socketId string, member OnlineMember) {
 	log.Printf("Room %s now has %d online members (added %s)", roomId, len(members), member.Username)
 }
 
-func (s *SocketServer) removeMember(roomId, socketId string, io *socket.Server) {
+func (s *SocketServer) removeMember(roomId, socketId string, io *socket.Server) (string, bool) {
 	s.memberMu.Lock()
 	var username string
+	var found bool
 	if s.roomMembers[roomId] != nil {
 		if m, ok := s.roomMembers[roomId][socketId]; ok {
 			username = m.Username
+			found = true
 			delete(s.roomMembers[roomId], socketId)
+			if len(s.roomMembers[roomId]) == 0 {
+				delete(s.roomMembers, roomId)
+			}
 		}
+	}
+
+	// Remove roomId from socketRooms for this socketId
+	if rooms, ok := s.socketRooms[socketId]; ok {
+		filtered := make([]string, 0, len(rooms))
+		for _, r := range rooms {
+			if r != roomId {
+				filtered = append(filtered, r)
+			}
+		}
+		if len(filtered) == 0 {
+			delete(s.socketRooms, socketId)
+		} else {
+			s.socketRooms[socketId] = filtered
+		}
+	}
+
+	// Only proceed if a recognized member was found and had a non-empty username
+	if !found || username == "" {
+		s.memberMu.Unlock()
+		return "", false
 	}
 
 	members := make([]OnlineMember, 0)
@@ -453,19 +492,22 @@ func (s *SocketServer) removeMember(roomId, socketId string, io *socket.Server) 
 	}
 	s.memberMu.Unlock()
 
-	// Emit user-left event
-	io.To(socket.Room(roomId)).Emit("user-left", map[string]interface{}{
-		"username": username,
-		"roomId":   roomId,
-	})
+	if io != nil {
+		// Emit user-left event
+		io.To(socket.Room(roomId)).Emit("user-left", map[string]interface{}{
+			"username": username,
+			"roomId":   roomId,
+		})
 
-	// Emit updated online-members
-	io.To(socket.Room(roomId)).Emit("online-members", map[string]interface{}{
-		"roomId":  roomId,
-		"members": members,
-	})
+		// Emit updated online-members
+		io.To(socket.Room(roomId)).Emit("online-members", map[string]interface{}{
+			"roomId":  roomId,
+			"members": members,
+		})
+	}
 
-	log.Printf("Room %s now has %d online members after user left", roomId, len(members))
+	log.Printf("Room %s now has %d online members after user %s left", roomId, len(members), username)
+	return username, true
 }
 
 func (s *SocketServer) listenPubSub() {
