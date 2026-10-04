@@ -29,6 +29,7 @@ import { useRouter } from "next/navigation";
 import { getBrowser, getDeviceType, getOS } from "@/utils/functions/deviceDetails";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface PermanentAuthFormProps {
 	currentIPAddress: string;
@@ -61,6 +62,9 @@ const RegisterSchema = z.object({
 	gender: z.enum(["male", "female", "transgender", "couple", "other"], {
 		required_error: "Gender is required",
 	}),
+	agreeToTerms: z.boolean().refine((val) => val === true, {
+		message: "You must agree to the Terms and Conditions to register.",
+	}),
 });
 
 type LoginFormData = z.infer<typeof LoginSchema>;
@@ -85,6 +89,7 @@ export default function PermanentAuthForm({ currentIPAddress }: PermanentAuthFor
 			email: "",
 			password: "",
 			dob: undefined,
+			agreeToTerms: false,
 		},
 	});
 
@@ -213,6 +218,18 @@ export default function PermanentAuthForm({ currentIPAddress }: PermanentAuthFor
 								)}
 							/>
 
+							<div className="text-xs text-muted-foreground text-center pt-1 leading-relaxed">
+								By signing in, you agree to our{" "}
+								<Link
+									href="/terms"
+									target="_blank"
+									className="text-primary underline underline-offset-4 font-medium hover:text-primary/80 transition-colors"
+								>
+									Terms & Conditions
+								</Link>
+								.
+							</div>
+
 							<Button
 								type="submit"
 								className="w-full mt-2"
@@ -326,6 +343,40 @@ export default function PermanentAuthForm({ currentIPAddress }: PermanentAuthFor
 											</SelectContent>
 										</Select>
 										<FormMessage />
+									</FormItem>
+								)}
+							/>
+
+							<FormField
+								control={registerForm.control}
+								name="agreeToTerms"
+								render={({ field }) => (
+									<FormItem className="flex items-start gap-3 rounded-lg border border-border p-3 sm:p-4 bg-muted/20">
+										<FormControl>
+											<Checkbox
+												checked={field.value}
+												onCheckedChange={field.onChange}
+												id="permanent-terms-agreement"
+												className="mt-0.5 shrink-0"
+											/>
+										</FormControl>
+										<div className="flex-1 space-y-1.5 leading-normal">
+											<FormLabel
+												htmlFor="permanent-terms-agreement"
+												className="text-xs sm:text-sm font-normal cursor-pointer text-muted-foreground block select-none leading-relaxed"
+											>
+												I confirm that I am at least 18 years old and agree to the{" "}
+												<Link
+													href="/terms"
+													target="_blank"
+													className="font-semibold text-primary underline underline-offset-4 hover:text-primary/80 transition-colors"
+												>
+													Terms & Conditions
+												</Link>
+												, including Intermediary Safe Harbor & Liability Disclaimers.
+											</FormLabel>
+											<FormMessage />
+										</div>
 									</FormItem>
 								)}
 							/>

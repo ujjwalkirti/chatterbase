@@ -18,7 +18,13 @@ function Navbar() {
 		<section className="">
 			<nav className="w-full lg:w-3/5 mx-auto flex items-center justify-between p-2">
 				<Link href="/" className="font-bold text-2xl">Chatter-Base</Link>
-				<div className="flex items-center gap-4">
+				<div className="flex items-center gap-3 sm:gap-4">
+					<Link
+						href="/terms"
+						className="text-xs text-muted-foreground hover:text-foreground transition-colors font-medium"
+					>
+						Terms
+					</Link>
 					<ModeToggle />
 					<ChatroomsDialog />
 					{session?.user && (

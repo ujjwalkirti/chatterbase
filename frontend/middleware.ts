@@ -2,6 +2,11 @@ import { auth } from "@/auth"
 import { NextResponse } from "next/server"
 
 export default auth((req) => {
+  // Unrestricted public access for Terms and Conditions
+  if (req.nextUrl.pathname.startsWith("/terms")) {
+    return NextResponse.next()
+  }
+
   const isLoggedIn = !!req.auth
   const isOnAuthPage =
     req.nextUrl.pathname.startsWith("/login") ||

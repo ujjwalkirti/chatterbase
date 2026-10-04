@@ -14,6 +14,7 @@ import { useRouter } from "next/navigation";
 import { getBrowser, getDeviceType, getOS } from "@/utils/functions/deviceDetails";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface LoginFormProps {
 	currentIPAddress: string;
@@ -35,6 +36,9 @@ const FormSchema = z.object({
 	gender: z.enum(["male", "female", "transgender", "couple", "other"], {
 		required_error: "Gender is required",
 	}),
+	agreeToTerms: z.boolean().refine((val) => val === true, {
+		message: "You must agree to the Terms and Conditions to proceed.",
+	}),
 });
 
 type FormData = z.infer<typeof FormSchema>;
@@ -46,6 +50,7 @@ export default function LoginForm({ currentIPAddress }: LoginFormProps) {
 		defaultValues: {
 			username: "",
 			dob: undefined,
+			agreeToTerms: false,
 		},
 	});
 
@@ -150,6 +155,36 @@ export default function LoginForm({ currentIPAddress }: LoginFormProps) {
 								</SelectContent>
 							</Select>
 							<FormMessage />
+						</FormItem>
+					)}
+				/>
+				<FormField
+					control={form.control}
+					name="agreeToTerms"
+					render={({ field }) => (
+						<FormItem className="flex items-start gap-3 rounded-lg border border-border p-3 sm:p-4 bg-muted/20">
+							<FormControl>
+								<Checkbox
+									checked={field.value}
+									onCheckedChange={field.onChange}
+									id="guest-terms-agreement"
+									className="mt-0.5 shrink-0"
+								/>
+							</FormControl>
+							<div className="flex-1 space-y-1.5 leading-normal">
+								<FormLabel htmlFor="guest-terms-agreement" className="text-xs sm:text-sm font-normal cursor-pointer text-muted-foreground block select-none leading-relaxed">
+									I confirm that I am at least 18 years old and agree to the{" "}
+									<Link
+										href="/terms"
+										target="_blank"
+										className="font-semibold text-primary underline underline-offset-4 hover:text-primary/80 transition-colors"
+									>
+										Terms & Conditions
+									</Link>
+									, including Intermediary Safe Harbor & Liability Disclaimers.
+								</FormLabel>
+								<FormMessage />
+							</div>
 						</FormItem>
 					)}
 				/>
