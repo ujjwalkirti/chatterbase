@@ -14,7 +14,8 @@ This document tracks all completed features, architectural milestones, and chang
 | **4. Developer Experience & Automation** | DevOps | Completed | Automated launcher scripts ([start-dev.ps1](file:///d:/personal-projects/chatterbase/start-dev.ps1), [start-dev.sh](file:///d:/personal-projects/chatterbase/start-dev.sh)), Air live-reload with Delve debugging, and [AGENTS.md](file:///d:/personal-projects/chatterbase/AGENTS.md). |
 | **5. Hybrid Dual-Authentication (PR #1)** | Full Stack | Completed | Implemented zero-friction ephemeral guest accounts with atomic Redis locks alongside permanent bcrypt-hashed accounts. |
 | **6. Typing Indicator & Resizable Panels (PR #2)** | Real-Time / UI | Completed | Discord-style real-time typing indicator with bouncing dots and shadcn resizable draggable online members pane. |
-| **7. Presence Idempotency & Message Deduplication** | Real-Time / Sockets | Completed | Hardened room entry/exit to prevent redundant system messages and ensure clean disconnection teardown. |
+| **7. Presence Idempotency & Message Deduplication (PR #3)** | Real-Time / Sockets | Completed | Hardened room entry/exit to prevent redundant system messages and ensure clean disconnection teardown. |
+| **8. Terms & Conditions and Legal Protection** | Legal / Compliance | Completed | Enterprise-grade terms page (/terms) with safe harbor, liability disclaimers, and mandatory consent checkboxes in auth flows. |
 
 ---
 
@@ -82,13 +83,25 @@ This document tracks all completed features, architectural milestones, and chang
   - Integrated into [chatrooms/[slug]/page.tsx](file:///d:/personal-projects/chatterbase/frontend/app/(protected)/(socket)/chatrooms/[slug]/page.tsx) with smooth drag handle, snap-to-collapse (0% width), and uncollapse toggle button.
   - Preserved mobile slide-out sheet drawer for viewports under `md`.
 
-### Phase 7: Chat Presence & Idempotency Hardening (Active Work)
+### Phase 7: Chat Presence & Idempotency Hardening (PR #3)
 - **Presence Teardown Idempotency**:
   - Made `removeMember` in [socket/socket.go](file:///d:/personal-projects/chatterbase/backend-go/socket/socket.go) idempotent to prevent duplicate `user-left` events when both `leave-room` and socket `disconnect` fire.
   - Added unit test `TestRemoveMember_IdempotentAndCleanup` in [socket/socket_test.go](file:///d:/personal-projects/chatterbase/backend-go/socket/socket_test.go).
 - **System Message Deduplication**:
   - Guarded against empty/whitespace usernames triggering phantom join/leave messages in [SocketProvider.tsx](file:///d:/personal-projects/chatterbase/frontend/contexts/SocketProvider.tsx).
   - Streamlined `useEffect` in [chatrooms/[slug]/page.tsx](file:///d:/personal-projects/chatterbase/frontend/app/(protected)/(socket)/chatrooms/[slug]/page.tsx) to manage room subscription cleanly without redundant joins on re-renders.
+
+### Phase 8: Terms & Conditions and Legal Protections
+- **Enterprise-Grade Legal Page**:
+  - Built dedicated, responsive Terms of Service at [frontend/app/terms/page.tsx](file:///d:/personal-projects/chatterbase/frontend/app/terms/page.tsx).
+  - Covered Intermediary Safe Harbor under Section 79 of the Indian IT Act 2000, IT Rules 2021 (Rule 3), and US 47 U.S.C. § 230 (Communications Decency Act).
+  - Established strict "AS IS" disclaimers, INR ₹100 liability caps, user indemnification ("hold harmless"), acceptable use policies, and grievance officer contact.
+- **Mandatory Consent Checkboxes**:
+  - Created [frontend/components/ui/checkbox.tsx](file:///d:/personal-projects/chatterbase/frontend/components/ui/checkbox.tsx) using Radix UI primitives.
+  - Integrated required `agreeToTerms` Zod validation into [LoginForm.tsx](file:///d:/personal-projects/chatterbase/frontend/components/auth/LoginForm.tsx) (guest login) and [PermanentAuthForm.tsx](file:///d:/personal-projects/chatterbase/frontend/components/auth/PermanentAuthForm.tsx) (permanent registration).
+  - Added terms notices to permanent sign-in and navigation bar [Navbar.tsx](file:///d:/personal-projects/chatterbase/frontend/components/common/Navbar.tsx).
+- **Public Access Exemption**:
+  - Configured [AuthProvider.tsx](file:///d:/personal-projects/chatterbase/frontend/contexts/AuthProvider.tsx) and [middleware.ts](file:///d:/personal-projects/chatterbase/frontend/middleware.ts) to permit unrestricted public access to `/terms` without requiring login.
 
 ---
 
@@ -120,3 +133,6 @@ This document tracks all completed features, architectural milestones, and chang
 | `4474cad` | 2026-09-27 | Ujjwal Kirti | **Merge PR #1**: Overhaul of authentication setup (hybrid dual auth) |
 | `c59b93a` | 2026-09-27 | ujjwalkirti | Add Discord typing indicator and resizable online members panel |
 | `d7a9734` | 2026-09-27 | Ujjwal Kirti | **Merge PR #2**: Typing indicator and resizable panel feature branch |
+| `e1b6efb` | 2026-10-04 | ujjwalkirti | Fix socket join/leave redundant messages and ensure leave idempotency |
+| `894fd4f` | 2026-10-04 | ujjwalkirti | Add `completedtasks.md` and link in `Readme.md` |
+| `208718b` | 2026-10-04 | Ujjwal Kirti | **Merge PR #3**: Socket presence deduplication and completed tasks documentation |

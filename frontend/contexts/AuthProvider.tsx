@@ -31,8 +31,13 @@ function AuthContextProvider({ children }: { children: React.ReactNode }) {
 
 	useEffect(() => {
 		if (status === "unauthenticated") {
-			const isAuthPage = pathname === "/login" || pathname === "/guest-login" || pathname === "/permanent-login";
-			if (!isAuthPage) {
+			const isPublicPage =
+				pathname === "/login" ||
+				pathname === "/guest-login" ||
+				pathname === "/permanent-login" ||
+				pathname === "/terms" ||
+				pathname?.startsWith("/terms");
+			if (!isPublicPage) {
 				router.push('/guest-login');
 			}
 		}
