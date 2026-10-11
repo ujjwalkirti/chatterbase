@@ -80,3 +80,6 @@ docker-compose.override.yml
 .agents/
 
 skills-lock.json
+
+
+tmp

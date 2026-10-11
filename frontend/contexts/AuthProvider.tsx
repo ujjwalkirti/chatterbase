@@ -68,7 +68,8 @@ function AuthContextProvider({ children }: { children: React.ReactNode }) {
 
 				if (!res.ok) {
 					console.warn("Backend session validation failed (status " + res.status + "), clearing session");
-					await signOut({ callbackUrl: "/guest-login" });
+					await signOut({ redirect: false });
+					window.location.href = "/guest-login?expired=true";
 				}
 			} catch (err) {
 				console.error("Session verification network error:", err);
@@ -84,7 +85,7 @@ function AuthContextProvider({ children }: { children: React.ReactNode }) {
 		const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 		const isGuest = user.userStatus === "anonymous";
 
-		// 1. Send heartbeat every 30 seconds to keep guest session presence active
+		// 1. Send heartbeat every 30 seconds to keep guest session presence active in Redis
 		const interval = setInterval(async () => {
 			try {
 				const res = await fetch(`${apiUrl}/api/auth/heartbeat`, {
@@ -98,39 +99,16 @@ function AuthContextProvider({ children }: { children: React.ReactNode }) {
 				if (isGuest && (res.status === 401 || res.status === 409)) {
 					console.warn("Guest heartbeat rejected (session expired), signing out");
 					clearInterval(interval);
-					await signOut({ callbackUrl: "/guest-login" });
+					await signOut({ redirect: false });
+					window.location.href = "/guest-login?expired=true";
 				}
 			} catch (err) {
 				console.error("Presence heartbeat error:", err);
 			}
 		}, 30000);
 
-		// 2. Beacon on tab/browser close to release guest lock immediately (guests only)
-		const handleBeforeUnload = () => {
-			if (!isGuest) return;
-			const payload = JSON.stringify({ token: user.accessToken });
-			if (navigator.sendBeacon) {
-				const blob = new Blob([payload], { type: "application/json" });
-				navigator.sendBeacon(`${apiUrl}/api/auth/guest-logout`, blob);
-			} else {
-				fetch(`${apiUrl}/api/auth/guest-logout`, {
-					method: "POST",
-					headers: { "Content-Type": "application/json" },
-					body: payload,
-					keepalive: true,
-				});
-			}
-		};
-
-		if (isGuest) {
-			window.addEventListener("beforeunload", handleBeforeUnload);
-		}
-
 		return () => {
 			clearInterval(interval);
-			if (isGuest) {
-				window.removeEventListener("beforeunload", handleBeforeUnload);
-			}
 		};
 	}, [user?.username, user?.accessToken, user?.userStatus]);
 

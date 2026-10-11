@@ -28,13 +28,20 @@ function Page() {
 	const { slug } = useParams();
 	const roomId = slug as string;
 	const { user } = useContext(authContext);
-	const { joinRoom, isConnected, leaveRoom, getOnlineMembersForRoom } = useSocket();
+	const { joinRoom, isConnected, leaveRoom, getOnlineMembersForRoom, hydrateRoomHistory } = useSocket();
 	const [isMobile, setIsMobile] = useState(false);
 	const [isMobileSheetOpen, setIsMobileSheetOpen] = useState(false);
 	const [isCollapsed, setIsCollapsed] = useState(false);
 
 	const membersPanelRef = usePanelRef();
 	const onlineMembers = getOnlineMembersForRoom(roomId);
+
+	// Hydrate room message history on entrance
+	useEffect(() => {
+		if (roomId && user?.accessToken) {
+			hydrateRoomHistory(roomId);
+		}
+	}, [roomId, user?.accessToken, hydrateRoomHistory]);
 
 	// Detect mobile screen sizes (< 768px)
 	useEffect(() => {

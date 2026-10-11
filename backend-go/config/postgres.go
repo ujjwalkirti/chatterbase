@@ -117,6 +117,7 @@ func runMigrations(ctx context.Context) error {
 
 		`CREATE INDEX IF NOT EXISTS idx_messages_room_id ON messages(room_id);`,
 		`CREATE INDEX IF NOT EXISTS idx_messages_created_at ON messages(created_at);`,
+		`CREATE INDEX IF NOT EXISTS idx_messages_room_created_desc ON messages(room_id, created_at DESC);`,
 	}
 
 	for _, q := range queries {

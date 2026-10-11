@@ -49,6 +49,15 @@ func TestGenerateAndVerifyToken(t *testing.T) {
 	if claims["dob"] != dob {
 		t.Errorf("expected dob %q, got %v", dob, claims["dob"])
 	}
+
+	iatVal, ok := claims["iat"]
+	if !ok {
+		t.Fatalf("expected 'iat' claim to be present in token")
+	}
+	iatFloat, ok := iatVal.(float64)
+	if !ok || iatFloat <= 0 {
+		t.Fatalf("expected valid numeric 'iat' claim, got %v", iatVal)
+	}
 }
 
 func TestPasswordHashing(t *testing.T) {

@@ -18,8 +18,10 @@ export default auth((req) => {
     req.nextUrl.pathname.startsWith("/chat") ||
     req.nextUrl.pathname.startsWith("/profile")
 
-  // Redirect logged-in users away from auth pages
-  if (isLoggedIn && isOnAuthPage) {
+  const isSessionExpired = req.nextUrl.searchParams.has("expired")
+
+  // Redirect logged-in users away from auth pages (unless redirected due to session expiration)
+  if (isLoggedIn && isOnAuthPage && !isSessionExpired) {
     return NextResponse.redirect(new URL("/available-chatrooms", req.nextUrl))
   }
 

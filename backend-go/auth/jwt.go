@@ -16,6 +16,7 @@ func GenerateToken(username, gender, dob, userStatus string) (string, error) {
 		"gender":      gender,
 		"dob":         dob,
 		"user_status": userStatus,
+		"iat":         time.Now().Unix(),
 		"exp":         time.Now().Add(2 * time.Hour).Unix(),
 	}
 	secret := os.Getenv("ACCESS_TOKEN_SECRET")
