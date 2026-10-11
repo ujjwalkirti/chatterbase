@@ -147,7 +147,37 @@ func getMessages(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	messages, err := GetMessagesByRoom(ctx, roomId, limit, offset)
+	var messages []Message
+
+	// If offset is requested (> 0) or mode is explicitly "raw", use standard pagination
+	if offset > 0 || c.Query("mode") == "raw" {
+		messages, err = GetMessagesByRoom(ctx, roomId, limit, offset)
+	} else {
+		// Approach A: Session-based windowing on room entrance
+		var sessionStart time.Time
+		if user, exists := c.Get("user"); exists {
+			if claims, ok := user.(jwt.MapClaims); ok {
+				if iatVal, ok := claims["iat"]; ok {
+					switch v := iatVal.(type) {
+					case float64:
+						sessionStart = time.Unix(int64(v), 0)
+					case int64:
+						sessionStart = time.Unix(v, 0)
+					}
+				}
+			}
+		}
+
+		// Optional query param override: session_start (unix seconds)
+		if ssParam := c.Query("session_start"); ssParam != "" {
+			if ssUnix, parseErr := strconv.ParseInt(ssParam, 10, 64); parseErr == nil && ssUnix > 0 {
+				sessionStart = time.Unix(ssUnix, 0)
+			}
+		}
+
+		messages, err = GetSessionMessages(ctx, roomId, sessionStart, 20, 100)
+	}
+
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "message": "Failed to fetch messages", "error": err.Error()})
 		return

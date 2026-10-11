@@ -22,6 +22,8 @@ interface ISocketContext {
 	sendTyping: (roomId: string, isTyping: boolean) => void;
 	typingUsers: Map<string, string[]>;
 	getTypingUsersForRoom: (roomId: string) => string[];
+	hydrateRoomHistory: (roomId: string) => Promise<void>;
+	isHistoryLoading: (roomId: string) => boolean;
 }
 
 
@@ -46,9 +48,11 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
 	const [currentRoomId, setCurrentRoomId] = useState<string | null>(null);
 	const [onlineMembers, setOnlineMembers] = useState<Map<string, OnlineMember[]>>(new Map());
 	const [typingUsers, setTypingUsers] = useState<Map<string, string[]>>(new Map());
+	const [historyLoading, setHistoryLoading] = useState<Map<string, boolean>>(new Map());
 
 	const socketRef = useRef<Socket | null>(null);
 	const typingTimeoutsRef = useRef<Map<string, Map<string, NodeJS.Timeout>>>(new Map());
+	const hydratedRoomsRef = useRef<Set<string>>(new Set());
 
 	const removeTypingUser = useCallback((roomId: string, username: string) => {
 		// Clear timer if exists
@@ -214,6 +218,83 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
 		[typingUsers]
 	);
 
+	const isHistoryLoading = useCallback(
+		(roomId: string): boolean => {
+			return historyLoading.get(roomId) || false;
+		},
+		[historyLoading]
+	);
+
+	const hydrateRoomHistory = useCallback(
+		async (roomId: string) => {
+			if (!roomId || !userRef.current?.accessToken) return;
+
+			if (hydratedRoomsRef.current.has(roomId)) return;
+			hydratedRoomsRef.current.add(roomId);
+
+			setHistoryLoading((prev) => {
+				const next = new Map(prev);
+				next.set(roomId, true);
+				return next;
+			});
+
+			try {
+				const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+				const res = await fetch(`${apiUrl}/api/chatroom/${encodeURIComponent(roomId)}/messages`, {
+					headers: {
+						Authorization: `Bearer ${userRef.current.accessToken}`,
+					},
+				});
+
+				if (res.ok) {
+					const json = await res.json();
+					if (json.success && Array.isArray(json.data)) {
+						const historyMessages: Message[] = json.data;
+
+						setMessages((prev) => {
+							const newMap = new Map(prev);
+							const currentMessages = newMap.get(roomId) || [];
+
+							const messageMap = new Map<string, Message>();
+
+							// 1. Seed history messages
+							for (const msg of historyMessages) {
+								const key = msg.id != null ? `id_${msg.id}` : `${msg.senderId}_${msg.message}_${msg.timestamp}`;
+								messageMap.set(key, msg);
+							}
+
+							// 2. Add current in-memory messages (optimistic updates, realtime socket)
+							for (const msg of currentMessages) {
+								const key = msg.id != null ? `id_${msg.id}` : `${msg.senderId}_${msg.message}_${msg.timestamp}`;
+								messageMap.set(key, msg);
+							}
+
+							// 3. Sort chronologically ASC
+							const mergedList = Array.from(messageMap.values()).sort((a, b) => {
+								const tA = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+								const tB = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+								return tA - tB;
+							});
+
+							newMap.set(roomId, mergedList);
+							return newMap;
+						});
+					}
+				}
+			} catch (err) {
+				console.error("Failed to hydrate room history:", err);
+				hydratedRoomsRef.current.delete(roomId);
+			} finally {
+				setHistoryLoading((prev) => {
+					const next = new Map(prev);
+					next.set(roomId, false);
+					return next;
+				});
+			}
+		},
+		[]
+	);
+
 	useEffect(() => {
 		const _socket = io(process.env.NEXT_PUBLIC_WEB_SOCKET_URL || "http://localhost:8000", {
 			autoConnect: false,
@@ -247,12 +328,13 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
 				const newMap = new Map(prev);
 				const roomMessages = newMap.get(payload.roomId) || [];
 
-				// Check if message already exists (from optimistic update)
+				// Check if message already exists (from optimistic update or history hydration)
 				const isDuplicate = roomMessages.some(
 					(msg) =>
-						msg.senderId === payload.senderId &&
-						msg.message === payload.message &&
-						msg.timestamp === payload.timestamp
+						(payload.id != null && msg.id != null && msg.id === payload.id) ||
+						(msg.senderId === payload.senderId &&
+							msg.message === payload.message &&
+							msg.timestamp === payload.timestamp)
 				);
 
 				if (!isDuplicate) {
@@ -381,7 +463,9 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
 				getOnlineMembersForRoom,
 				sendTyping,
 				typingUsers,
-				getTypingUsersForRoom
+				getTypingUsersForRoom,
+				hydrateRoomHistory,
+				isHistoryLoading
 			}}
 		>
 			{children}

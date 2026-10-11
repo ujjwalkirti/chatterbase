@@ -12,6 +12,7 @@ interface ChatRoom {
 }
 
 interface Message {
+    id?: number;
     senderId: string;
     senderUsername?: string;
     message: string;
