@@ -28,13 +28,27 @@ function Navbar() {
 	};
 
 	return (
-		<section className="">
-			<nav className="w-full lg:w-3/5 mx-auto flex items-center justify-between p-2">
-				<Link href="/" className="font-bold text-2xl">Chatter-Base</Link>
-				<div className="flex items-center gap-3 sm:gap-4">
+		<header className="border-b border-border/60 bg-background/80 backdrop-blur-md sticky top-0 z-40">
+			<nav className="w-full max-w-7xl mx-auto flex items-center justify-between px-3 sm:px-4 py-2">
+				<Link href="/" className="flex items-center gap-2 group">
+					<div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-violet-600 text-white flex items-center justify-center font-bold text-sm shadow-xs group-hover:scale-105 transition-transform">
+						C
+					</div>
+					<span className="font-bold text-lg sm:text-xl tracking-tight text-foreground">
+						ChatterBase
+					</span>
+				</Link>
+
+				<div className="flex items-center gap-2 sm:gap-3">
+					<Link
+						href="/available-chatrooms"
+						className="text-xs text-muted-foreground hover:text-foreground transition-colors font-medium px-2 py-1 rounded-md hover:bg-muted"
+					>
+						Rooms
+					</Link>
 					<Link
 						href="/terms"
-						className="text-xs text-muted-foreground hover:text-foreground transition-colors font-medium"
+						className="text-xs text-muted-foreground hover:text-foreground transition-colors font-medium px-2 py-1 rounded-md hover:bg-muted"
 					>
 						Terms
 					</Link>
@@ -43,15 +57,17 @@ function Navbar() {
 					{session?.user && (
 						<Button
 							variant="ghost"
+							size="sm"
 							onClick={handleLogout}
-							className="flex items-center gap-2 hover:cursor-pointer"
+							className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10 cursor-pointer h-8 px-2.5"
 						>
-							Logout <LogOutIcon className="w-4 h-4" />
+							<span className="hidden sm:inline">Logout</span>
+							<LogOutIcon className="w-3.5 h-3.5" />
 						</Button>
 					)}
 				</div>
 			</nav>
-		</section>
+		</header>
 	);
 }
 

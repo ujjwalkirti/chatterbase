@@ -52,20 +52,25 @@ export default function TypingIndicator({ roomId }: TypingIndicatorProps) {
 	return (
 		<div
 			aria-live="polite"
-			className={`h-6 flex items-center px-1 text-xs text-muted-foreground transition-opacity duration-200 ${
-				hasTypers ? "opacity-100" : "opacity-0 select-none pointer-events-none"
+			className={`flex items-center px-2 py-1 transition-all duration-200 ${
+				hasTypers
+					? "opacity-100 max-h-12 translate-y-0"
+					: "opacity-0 max-h-0 pointer-events-none -translate-y-1 overflow-hidden"
 			}`}
 		>
 			{hasTypers && (
-				<div className="flex items-center gap-1.5">
-					<div className="flex items-center gap-0.5 mr-0.5">
-						<span className="w-1.5 h-1.5 rounded-full bg-primary/70 animate-bounce [animation-delay:-0.32s]" />
-						<span className="w-1.5 h-1.5 rounded-full bg-primary/70 animate-bounce [animation-delay:-0.16s]" />
-						<span className="w-1.5 h-1.5 rounded-full bg-primary/70 animate-bounce" />
+				<div className="inline-flex items-center gap-2.5 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/60 dark:border-zinc-700/50 rounded-2xl rounded-bl-xs px-3.5 py-1.5 shadow-xs">
+					<div className="flex items-center gap-1">
+						<span className="w-1.5 h-1.5 rounded-full bg-blue-600 dark:bg-blue-400 animate-bounce [animation-delay:-0.32s]" />
+						<span className="w-1.5 h-1.5 rounded-full bg-blue-600 dark:bg-blue-400 animate-bounce [animation-delay:-0.16s]" />
+						<span className="w-1.5 h-1.5 rounded-full bg-blue-600 dark:bg-blue-400 animate-bounce" />
 					</div>
-					{renderTypingText(typingUsers)}
+					<div className="text-xs text-muted-foreground font-medium">
+						{renderTypingText(typingUsers)}
+					</div>
 				</div>
 			)}
 		</div>
 	);
 }
+
